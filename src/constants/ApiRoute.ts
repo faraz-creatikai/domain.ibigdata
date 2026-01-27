@@ -1,7 +1,7 @@
-export const BASE_URL = "http://localhost:5000/api";
+export const BASE_URL = "https://domain.ibigdata.in/api";
 //https://live-project-backend-1.onrender.com
 //https://propertyapi.aileadgenie.cloud/api
-//https://apiconsult.ibigdata.in
+//https://apidomain.ibigdata.in
 //https://apiedu.ibigdata.in
 //https://apiwbh.ibigdata.in
 //https://apiproperty.ibigdata.in
