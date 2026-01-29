@@ -26,10 +26,15 @@ import { trimCountryCodeHelper } from "@/app/utils/trimCountryCodeHelper";
 import { getsubLocationByCityLoc } from "@/store/masters/sublocation/sublocation";
 import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
+import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 
 interface ErrorInterface {
   [key: string]: string;
 }
+
+type CustomFieldsType = {
+  [key: string]: string; // key is dynamic, value is string
+};
 
 export default function CustomerEdit() {
   const { id } = useParams();
@@ -68,6 +73,7 @@ export default function CustomerEdit() {
   const [errors, setErrors] = useState<ErrorInterface>({});
   const [loading, setLoading] = useState(true);
   const [fieldOptions, setFieldOptions] = useState<Record<string, any[]>>({});
+  const [customFields, setCustomFields] = useState<CustomFieldsType>({});
 
   // ✅ Track deleted existing images separately
   const [removedCustomerImages, setRemovedCustomerImages] = useState<string[]>([]);
@@ -78,6 +84,19 @@ export default function CustomerEdit() {
     if (!num) return "";
     return num.startsWith("+91") ? num.slice(3) : num;
   };
+
+    const getCustomerFieldsFunc = async () => {
+      const data = await getCustomerFields();
+      const activeFields = data.filter((e: any) => e.Status === "Active");
+      console.log(" fields are ", activeFields);
+      const fieldsObj: CustomFieldsType = {};
+      activeFields.forEach((field: any) => {
+        fieldsObj[field.Name] = "";
+      });
+  
+     // setCustomFields(fieldsObj);
+     return fieldsObj;
+    }
 
   // Fetch existing customer data
   useEffect(() => {
@@ -126,7 +145,10 @@ export default function CustomerEdit() {
           CustomerImage: [],
           SitePlan: {} as File,
         });
+console.log(" nice brother , ",data.CustomerFields)
 
+const customerFields = await getCustomerFieldsFunc();
+    setCustomFields({...customerFields,...data.CustomerFields});
 
         console.log(" customer data after set ", data.SubLocation)
         // Preview URLs for already existing images
@@ -161,6 +183,14 @@ export default function CustomerEdit() {
     },
     []
   );
+
+    // handle custom input changes dynamically
+  const handleCustomInputChange = (key: string, value: string) => {
+    setCustomFields((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
   const handleSelectChange = useCallback((label: string, selected: string) => {
     setCustomerData((prev) => ({ ...prev, [label]: selected }));
@@ -286,6 +316,8 @@ export default function CustomerEdit() {
     formData.append("removedCustomerImages", JSON.stringify(removedCustomerImages));
     formData.append("removedSitePlans", JSON.stringify(removedSitePlans));
     console.log(" removed siteplan ", removedSitePlans)
+
+    formData.append("CustomerFields", JSON.stringify(customFields));
 
     // Handle full deletion (when user removes all)
     /*  if (customerData.CustomerImage.length === 0)
@@ -562,10 +594,32 @@ export default function CustomerEdit() {
               <InputField className=" max-sm:hidden" label="Video" name="Video" value={customerData.Video} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label="Google Map" name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Verified) ? fieldOptions.Verified : []} label="Verified" value={customerData.Verified} onChange={(v) => handleSelectChange("Verified", v)} />
-              <div className=" ">
+                  
+            </div>
+
+            <div className=" sm:flex flex-wrap my-5 gap-5">
                 <FileUpload label="Customer Images" multiple onChange={(e) => handleFileChange(e, "CustomerImage")} previews={imagePreviews} onRemove={handleRemoveImage} />
                 <FileUpload label="Site Plan" onChange={(e) => handleFileChange(e, "SitePlan")} previews={sitePlanPreview ? [sitePlanPreview] : []} onRemove={() => handleRemoveSitePlan()} />
               </div>
+            <div className=" mt-10 w-full">
+              <h2 className="text-xl font-semibold text-gray-700 mb-4 ">
+                  Additional Information
+                </h2>
+            <div className=" grid grid-cols-3 gap-6 max-lg:grid-cols-1 my-6">
+              {Object.keys(customFields).map((key) => (
+                <InputField
+                  key={key}
+                  className="max-sm:hidden"
+                  label={key}
+                  name={key}
+                  value={customFields[key]}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                    handleCustomInputChange(key, e.target.value)
+                  }
+                />
+              ))}
+            </div>
+
             </div>
 
             <div className="flex justify-end mt-4">

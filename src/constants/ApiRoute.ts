@@ -1,4 +1,4 @@
-export const BASE_URL = "https://apidomain.ibigdata.in/api";
+export const BASE_URL = "http://localhost:5000/api";
 //https://live-project-backend-1.onrender.com
 //https://propertyapi.aileadgenie.cloud/api
 //https://apidomain.ibigdata.in
@@ -217,6 +217,14 @@ export const API_ROUTES = {
       ADD: `${BASE_URL}/mas/price`,
       UPDATE: (id: string) => `${BASE_URL}/mas/price/${id}`,
       DELETE: (id: string) => `${BASE_URL}/mas/price/${id}`,
+    },
+    CUSTOMERFIELDS: {
+      GET_ALL: `${BASE_URL}/mas/customerFields`,
+      GET_BY_ID: (id: string) => `${BASE_URL}/mas/customerFields/${id}`,
+      GET_BY_PARAMS: (params: string) => `${BASE_URL}/mas/customerFields?${params}`,
+      ADD: `${BASE_URL}/mas/customerFields`,
+      UPDATE: (id: string) => `${BASE_URL}/mas/customerFields/${id}`,
+      DELETE: (id: string) => `${BASE_URL}/mas/customerFields/${id}`,
     },
 
     // 🔹 NEW MASTER MODULES ADDED BELOW 🔹

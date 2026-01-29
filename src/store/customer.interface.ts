@@ -23,6 +23,7 @@ export interface customerAllDataInterface {
   URL?: string;
   isFavourite?: boolean;
   Verified: string;
+  CustomerFields?: any[];
   CustomerImage: File[];
   SitePlan: File
 }

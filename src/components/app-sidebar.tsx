@@ -89,6 +89,10 @@ const data = {
       icon: Diamond,
       items: [
         {
+          title: "Customer Fields",
+          url: "/masters/customerfields",
+        },
+        {
           title: "Campaign",
           url: "/masters/campaign",
         },

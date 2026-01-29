@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, act } from "react";
 import Link from "next/link";
 import SingleSelect from "@/app/component/SingleSelect";
 import DateSelector from "@/app/component/DateSelector";
@@ -28,10 +28,15 @@ import { trimCountryCodeHelper } from "@/app/utils/trimCountryCodeHelper";
 import { getsubLocationByCityLoc } from "@/store/masters/sublocation/sublocation";
 import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
+import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 
 interface ErrorInterface {
   [key: string]: string;
 }
+
+type CustomFieldsType = {
+  [key: string]: string; // key is dynamic, value is string
+};
 
 export default function CustomerAdd() {
   const [customerData, setCustomerData] = useState<customerAllDataInterface>({
@@ -52,8 +57,8 @@ export default function CustomerAdd() {
     CustomerDate: "",
     CustomerYear: "",
     Other: "",
-    Price:"",
-    URL:"",
+    Price: "",
+    URL: "",
     Description: "",
     Video: "",
     GoogleMap: "",
@@ -62,11 +67,27 @@ export default function CustomerAdd() {
     SitePlan: {} as File
   });
   const [fieldOptions, setFieldOptions] = useState<Record<string, any[]>>({});
+  const [customFields, setCustomFields] = useState<CustomFieldsType>({});
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [sitePlanPreview, setSitePlanPreview] = useState<string>("");
   const [errors, setErrors] = useState<ErrorInterface>({});
   const router = useRouter();
 
+  const getCustomerFieldsFunc = async () => {
+    const data = await getCustomerFields();
+    const activeFields = data.filter((e: any) => e.Status === "Active");
+    console.log(" fields are ", activeFields);
+    const fieldsObj: CustomFieldsType = {};
+    activeFields.forEach((field: any) => {
+      fieldsObj[field.Name] = "";
+    });
+
+    setCustomFields(fieldsObj);
+  }
+
+  useEffect(() => {
+    getCustomerFieldsFunc();
+  }, [])
 
   const handleContactExist = async (contactNo: string) => {
     const duplicate = await isContactNoExist(contactNo);
@@ -85,6 +106,14 @@ export default function CustomerAdd() {
     },
     []
   );
+
+  // handle custom input changes dynamically
+  const handleCustomInputChange = (key: string, value: string) => {
+    setCustomFields((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
   const handleSelectChange = useCallback(
     (label: string, selected: string) => {
@@ -177,8 +206,7 @@ export default function CustomerAdd() {
   const handleSubmit = async () => {
     /*  const duplicate = await isContactNoExist(customerData.ContactNumber);
     if (duplicate) return; */
-
-
+console.log(" file object customerfields : ",customFields)
 
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
@@ -223,6 +251,8 @@ export default function CustomerAdd() {
     if (customerData.SitePlan && (customerData.SitePlan as any).name) {
       formData.append("SitePlan", customerData.SitePlan);
     }
+
+    formData.append("CustomerFields", JSON.stringify(customFields));
     //console.log(customerData)
     const result = await addCustomer(formData);
 
@@ -487,7 +517,7 @@ export default function CustomerAdd() {
               <InputField className=" max-sm:hidden" label="Customer Year" name="CustomerYear" value={customerData.CustomerYear} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label="Others" name="Others" value={customerData.Other} onChange={handleInputChange} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} label="Price" value={customerData.Price} onChange={(v) => handleSelectChange("Price", v)} />
-              <InputField className=" max-sm:hidden" label="URL" name="URL" value={customerData.URL??""} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label="URL" name="URL" value={customerData.URL ?? ""} onChange={handleInputChange} />
               <TextareaField label="Description" name="Description" value={customerData.Description} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label="Video" name="Video" value={customerData.Video} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label="Google Map" name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
@@ -495,9 +525,31 @@ export default function CustomerAdd() {
 
 
             </div>
+
             <div className=" sm:flex flex-wrap my-5 gap-5">
               <FileUpload label="Customer Images" multiple previews={imagePreviews} onChange={(e) => handleFileChange(e, "CustomerImage")} onRemove={handleRemoveImage} />
               <FileUpload label="Site Plan" previews={sitePlanPreview ? [sitePlanPreview] : []} onChange={(e) => handleFileChange(e, "SitePlan")} onRemove={handleRemoveSitePlan} />
+            </div>
+
+             <div className=" mt-10">
+              <h2 className="text-xl font-semibold text-gray-700 mb-4 ">
+                  Additional Information
+                </h2>
+            <div className=" grid grid-cols-3 gap-6 max-lg:grid-cols-1 my-6">
+              {Object.keys(customFields).map((key) => (
+                <InputField
+                  key={key}
+                  className="max-sm:hidden"
+                  label={key}
+                  name={key}
+                  value={customFields[key]}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                    handleCustomInputChange(key, e.target.value)
+                  }
+                />
+              ))}
+            </div>
+
             </div>
 
             <div className="flex justify-end mt-4">

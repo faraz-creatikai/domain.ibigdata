@@ -23,51 +23,29 @@ import ObjectSelect from "@/app/component/ObjectSelect";
 import CustomerSubtypeAdd from "@/app/masters/customer-subtype/add/page";
 import { useCustomerImport } from "@/context/CustomerImportContext";
 import LoaderCircle from "@/app/component/LoaderCircle";
+import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 
-interface ErrorInterface {
-    [key: string]: string;
-}
+
+type CategorizedHeader = {
+    header: string;
+    type: "system" | "custom";
+    mappedTo: string;
+};
 
 export default function SelectImports() {
-    const [customerData, setCustomerData] = useState<customerImportDataInterface>({
-        Campaign: { id: "", name: "" },
-        CustomerType: { id: "", name: "" },
-        customerName: "",
-        CustomerSubtype: { id: "", name: "" },
-        ContactNumber: "",
-        City: "",
-        Location: "",
-        SubLocation: "",
-        Area: "",
-        Address: "",
-        Email: "",
-        Facilities: "",
-        ReferenceId: "",
-        CustomerId: "",
-        CustomerDate: "",
-        CustomerYear: "",
-        Other: "",
-        Description: "",
-        Video: "",
-        GoogleMap: "",
-        Verified: "",
-    });
-    const [fieldOptions, setFieldOptions] = useState<Record<string, any[]>>({});
     const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
     const [importLoader, setImportLoader] = useState(false);
 
 
-
-    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-    const [sitePlanPreview, setSitePlanPreview] = useState<string>("");
-    const [errors, setErrors] = useState<ErrorInterface>({});
     const router = useRouter();
     const { excelHeaders, file } = useCustomerImport();
+    const [customerFieldMasters, setCustomerFieldMasters] = useState<string[]>([]);
+    const [categorizedHeaders, setCategorizedHeaders] = useState<CategorizedHeader[]>([]);
 
     const normalize = (str: string) =>
-  str
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+        str
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
 
 
     useEffect(() => {
@@ -77,38 +55,17 @@ export default function SelectImports() {
         }
     }, [excelHeaders]);
 
+    useEffect(() => {
+        const loadCustomerFields = async () => {
+            const res = await getCustomerFields(); 
+             const activeFields = res.filter((e: any) => e.Status === "Active");
+            setCustomerFieldMasters(activeFields.map((f: any) => f.Name));
+        };
+        loadCustomerFields();
+    }, []);
 
 
-    // 🟩 Handle Input
-    const handleInputChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            const { name, value } = e.target;
-            setCustomerData((prev) => ({ ...prev, [name]: value }));
-            setErrors((prev) => ({ ...prev, [name]: "" }));
-        },
-        []
-    );
 
-    const handleSelectChange = useCallback(
-        (label: string, selected: string) => {
-            setCustomerData((prev) => ({ ...prev, [label]: selected }));
-            setErrors((prev) => ({ ...prev, [label]: "" }));
-        },
-        []
-    );
-
-
-    // Validate Form
-    const validateForm = () => {
-        const newErrors: ErrorInterface = {};
-        if (!customerData.Campaign?.name.trim())
-            newErrors.Campaign = "Campaign is required";
-        if (!customerData.CustomerType?.name.trim())
-            newErrors.CustomerType = "Customer Type is required";
-        if (!customerData.CustomerSubtype?.name.trim())
-            newErrors.CustomerSubtype = "Customer Subtype is required";
-        return newErrors;
-    };
 
     //Submit Form
     const handleSubmit = async () => {
@@ -144,70 +101,9 @@ export default function SelectImports() {
         setImportLoader(false);
     };
 
-    const dropdownOptions = ["Option1", "Option2", "Option3"];
-
-    // Object-based fields (for ObjectSelect)
-    const objectFields = [
-        { key: "Campaign", fetchFn: getCampaign },
-        { key: "CustomerType", staticData: [] },
-        { key: "CustomerSubtype", staticData: [] } // dependent
-
-    ];
-
-    // Simple array fields (for normal Select)
-    const arrayFields = [
-        { key: "Verified", staticData: ["yes", "no"] },
-        { key: "Gender", staticData: ["male", "female", "other"] },
-        { key: "City", fetchFn: getCity },
-        { key: "Facilities", fetchFn: getFacilities },
-        { key: "Location", fetchFn: getLocation },
-    ];
 
 
-    useEffect(() => {
-        const loadFieldOptions = async () => {
-            await handleFieldOptionsObject(objectFields, setFieldOptions);
-            await handleFieldOptions(arrayFields, setFieldOptions);
-        };
-        loadFieldOptions();
-    }, []);
-
-
-    useEffect(() => {
-        if (customerData.Campaign.id) {
-            fetchCustomerType(customerData.Campaign.id);
-        } else {
-            setFieldOptions((prev) => ({ ...prev, CustomerType: [] }));
-        }
-
-        if (customerData.Campaign.id && customerData.CustomerType.id) {
-            fetchCustomerSubType(customerData.Campaign.id, customerData.CustomerType.id);
-        } else {
-            setFieldOptions((prev) => ({ ...prev, CustomerSubtype: [] }));
-        }
-    }, [customerData.Campaign.id, customerData.CustomerType.id]);
-
-    const fetchCustomerType = async (campaignId: string) => {
-        try {
-            const res = await getTypesByCampaign(campaignId);
-            setFieldOptions((prev) => ({ ...prev, CustomerType: res || [] }));
-        } catch (error) {
-            console.error("Error fetching types:", error);
-            setFieldOptions((prev) => ({ ...prev, CustomerType: [] }));
-        }
-    };
-
-    const fetchCustomerSubType = async (campaignId: string, customertypeId: string) => {
-        try {
-            const res = await getSubtypeByCampaignAndType(campaignId, customertypeId);
-            setFieldOptions((prev) => ({ ...prev, CustomerSubtype: res || [] }));
-        } catch (error) {
-            console.error("Error fetching types:", error);
-            setFieldOptions((prev) => ({ ...prev, CustomerSubtype: [] }));
-        }
-    };
-
-    const mappingFields = [
+    const systemFields = [
         "Campaign",
         "CustomerType",
         "CustomerSubType",
@@ -233,25 +129,45 @@ export default function SelectImports() {
         "Verified",
     ];
 
+    const customerFields =[  ...customerFieldMasters,...systemFields];
+
+
     useEffect(() => {
-  if (!excelHeaders.length || Object.keys(fieldMapping).length > 0) return;
+        if (!excelHeaders.length) return;
 
-  const autoMapping: Record<string, string> = {};
+        const categorized: CategorizedHeader[] = excelHeaders.map((header) => {
+            const systemMatch = systemFields.find(
+                (field) => normalize(field) === normalize(header)
+            );
 
-  excelHeaders.forEach((header) => {
-    const match = mappingFields.find(
-      (field) => normalize(field) === normalize(header)
-    );
+            if (systemMatch) {
+                return {
+                    header,
+                    type: "system",
+                    mappedTo: systemMatch, // auto-mapped
+                };
+            }
 
-    if (match) {
-      autoMapping[header] = match;
-    }
-  });
+            return {
+                header,
+                type: "custom",
+                mappedTo: "", // user will select
+            };
+        });
 
-  if (Object.keys(autoMapping).length > 0) {
-    setFieldMapping(autoMapping);
-  }
-}, [excelHeaders]);
+        setCategorizedHeaders(categorized);
+
+        // Also initialize fieldMapping
+        const initialMapping: Record<string, string> = {};
+        categorized.forEach((item) => {
+            if (item.mappedTo) {
+                initialMapping[item.header] = item.mappedTo;
+            }
+        });
+
+        setFieldMapping(initialMapping);
+    }, [excelHeaders]);
+
 
 
 
@@ -275,34 +191,65 @@ export default function SelectImports() {
                             </h1>
                         </div>
 
-                        <h2 className=" text-xl font-semibold text-gray-700 my-5 mt-10">Map Fields</h2>
-                        <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4 mt-5">
-                            {excelHeaders.map((header) => {
-                                /* if(header==="Campaign" || header==="Customer Type" || header==="Property Type" || header==="Customer Subtype")
-                                    return null; */
-                                return <div key={header} className="flex flex-col">
-                                    <label className="text-sm font-medium mb-4">{header}</label>
+                        <h2 className="text-xl font-semibold text-gray-700 mt-8">
+                            Map System Fields
+                        </h2>
 
-                                    <SingleSelect
-                                        label="Map To"
-                                        options={mappingFields}
-                                        value={fieldMapping[header] || ""}
-                                        onChange={(value) =>
-                                            setFieldMapping((prev) => ({
-                                                ...prev,
-                                                [header]: value,
-                                            }))
-                                        }
-                                    />
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                            {categorizedHeaders
+                                .filter((item) => item.type === "system")
+                                .map(({ header }) => (
+                                    <div key={`system-${header}`}>
+                                        <label className="text-sm font-medium mb-2 block">
+                                            {header}
+                                        </label>
 
-
-                                </div>
-                            })}
+                                        <SingleSelect
+                                            label="Map to system field"
+                                            options={systemFields}
+                                            value={fieldMapping[header] || ""}
+                                            onChange={(value) =>
+                                                setFieldMapping((prev) => ({
+                                                    ...prev,
+                                                    [header]: value,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                ))}
                         </div>
+                        <h2 className="text-xl font-semibold text-gray-700 mt-10">
+                           Map Custom Fields
+                        </h2>
+
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                            {categorizedHeaders
+                                .filter((item) => item.type === "custom")
+                                .map(({ header }) => (
+                                    <div key={`custom-${header}`}>
+                                        <label className="text-sm font-medium mb-2 block">
+                                            {header}
+                                        </label>
+
+                                        <SingleSelect
+                                            label="Map to custom field"
+                                            options={customerFields}
+                                            value={fieldMapping[header] || ""}
+                                            onChange={(value) =>
+                                                setFieldMapping((prev) => ({
+                                                    ...prev,
+                                                    [header]: value,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                ))}
+                        </div>
+
 
                         <div className="flex justify-end mt-4">
 
-                            <SaveButton text={` ${importLoader ? "Saving.." : "Save Import"}`} icon={importLoader&&<LoaderCircle/>} onClick={handleSubmit} />
+                            <SaveButton text={` ${importLoader ? "Saving.." : "Save Import"}`} icon={importLoader && <LoaderCircle />} onClick={handleSubmit} />
 
                         </div>
                     </form>
