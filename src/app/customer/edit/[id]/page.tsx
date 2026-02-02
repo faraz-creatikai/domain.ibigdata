@@ -27,6 +27,7 @@ import { getsubLocationByCityLoc } from "@/store/masters/sublocation/sublocation
 import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
 import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
+import { useCustomerFieldLabel } from "@/context/customer/CustomerFieldLabelContext";
 
 interface ErrorInterface {
   [key: string]: string;
@@ -39,6 +40,7 @@ type CustomFieldsType = {
 export default function CustomerEdit() {
   const { id } = useParams();
   const router = useRouter();
+  const { getLabel } = useCustomerFieldLabel();
 
   const [customerData, setCustomerData] = useState<customerAllDataInterface>({
     Campaign: { id: "", name: "" },
@@ -85,18 +87,18 @@ export default function CustomerEdit() {
     return num.startsWith("+91") ? num.slice(3) : num;
   };
 
-    const getCustomerFieldsFunc = async () => {
-      const data = await getCustomerFields();
-      const activeFields = data.filter((e: any) => e.Status === "Active");
-      console.log(" fields are ", activeFields);
-      const fieldsObj: CustomFieldsType = {};
-      activeFields.forEach((field: any) => {
-        fieldsObj[field.Name] = "";
-      });
-  
-     // setCustomFields(fieldsObj);
-     return fieldsObj;
-    }
+  const getCustomerFieldsFunc = async () => {
+    const data = await getCustomerFields();
+    const activeFields = data.filter((e: any) => e.Status === "Active");
+    console.log(" fields are ", activeFields);
+    const fieldsObj: CustomFieldsType = {};
+    activeFields.forEach((field: any) => {
+      fieldsObj[field.Name] = "";
+    });
+
+    // setCustomFields(fieldsObj);
+    return fieldsObj;
+  }
 
   // Fetch existing customer data
   useEffect(() => {
@@ -145,10 +147,10 @@ export default function CustomerEdit() {
           CustomerImage: [],
           SitePlan: {} as File,
         });
-console.log(" nice brother , ",data.CustomerFields)
+        console.log(" nice brother , ", data.CustomerFields)
 
-const customerFields = await getCustomerFieldsFunc();
-    setCustomFields({...customerFields,...data.CustomerFields});
+        const customerFields = await getCustomerFieldsFunc();
+        setCustomFields({ ...customerFields, ...data.CustomerFields });
 
         console.log(" customer data after set ", data.SubLocation)
         // Preview URLs for already existing images
@@ -184,7 +186,7 @@ const customerFields = await getCustomerFieldsFunc();
     []
   );
 
-    // handle custom input changes dynamically
+  // handle custom input changes dynamically
   const handleCustomInputChange = (key: string, value: string) => {
     setCustomFields((prev) => ({
       ...prev,
@@ -466,7 +468,7 @@ const customerFields = await getCustomerFieldsFunc();
               <SingleSelect options={Array.isArray(fieldOptions?.CustomerType)?fieldOptions.CustomerType:[]} label="Customer Type" value={customerData.CustomerType} onChange={(v) => handleSelectChange("CustomerType", v)} /> */}
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.Campaign) ? fieldOptions.Campaign : []}
-                label="Campaign"
+                label={getLabel("Campaign", "Campaign")}
                 value={customerData.Campaign.id}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -485,7 +487,7 @@ const customerFields = await getCustomerFieldsFunc();
 
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.CustomerType) ? fieldOptions.CustomerType : []}
-                label="Customer Type"
+                label={getLabel("CustomerType", "Customer Type")}
                 value={customerData.CustomerType.name}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -504,7 +506,7 @@ const customerFields = await getCustomerFieldsFunc();
 
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.CustomerSubtype) ? fieldOptions.CustomerSubtype : []}
-                label="Customer Subtype"
+                label={getLabel("CustomerSubType", "Customer Subtype")}
                 value={customerData.CustomerSubtype?.name}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -520,11 +522,11 @@ const customerFields = await getCustomerFieldsFunc();
                 error={errors.CustomerSubtype}
               />
 
-              <InputField label="Customer Name" name="customerName" value={customerData.customerName} onChange={handleInputChange} error={errors.CustomerName} />
-              <InputField label="Contact No" name="ContactNumber" value={customerData.ContactNumber} onChange={handleInputChange} error={errors.ContactNumber} />
+              <InputField label={getLabel("customerName", "Customer Name")} name="customerName" value={customerData.customerName} onChange={handleInputChange} error={errors.CustomerName} />
+              <InputField label={getLabel("ContactNumber", "Contact No")} name="ContactNumber" value={customerData.ContactNumber} onChange={handleInputChange} error={errors.ContactNumber} />
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.City) ? fieldOptions.City : []}
-                label="City"
+                label={getLabel("City", "City")}
                 value={customerData.City.id}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -543,7 +545,7 @@ const customerFields = await getCustomerFieldsFunc();
               />
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.Location) ? fieldOptions.Location : []}
-                label="Location"
+                label={getLabel("Location", "Location")}
                 value={customerData.Location.id}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -561,7 +563,7 @@ const customerFields = await getCustomerFieldsFunc();
               />
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.SubLocation) ? fieldOptions.SubLocation : []}
-                label="SubLocation"
+                label={getLabel("SubLocation", "Sub Location")}
                 value={customerData.SubLocation.id}
                 getLabel={(item) => item?.Name || ""}
                 getId={(item) => item?._id || ""}
@@ -576,49 +578,49 @@ const customerFields = await getCustomerFieldsFunc();
                 }}
                 error={errors.SubLocation}
               />
-              <InputField className=" max-sm:hidden" label="Area" name="Area" value={customerData.Area} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label="Address" name="Address" value={customerData.Address} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label="Email" name="Email" value={customerData.Email} onChange={handleInputChange} error={errors.Email} />
-              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Facilities) ? fieldOptions.Facilities : []} label="Facilities" value={customerData.Facilities} onChange={(v) => handleSelectChange("Facilities", v)} />
-              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} label="ReferenceId" value={customerData.ReferenceId} onChange={(v) => handleSelectChange("ReferenceId", v)} />
+              <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("Address", "Address")} name="Address" value={customerData.Address} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("Email", "Email")} name="Email" value={customerData.Email} onChange={handleInputChange} error={errors.Email} />
+              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Facilities) ? fieldOptions.Facilities : []} label={getLabel("Facillities", "Facilites")} value={customerData.Facilities} onChange={(v) => handleSelectChange("Facilities", v)} />
+              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} label={getLabel("ReferenceId", "Reference Id")} value={customerData.ReferenceId} onChange={(v) => handleSelectChange("ReferenceId", v)} />
               {/* <InputField className=" max-sm:hidden" label="Reference ID" name="ReferenceId" value={customerData.ReferenceId} onChange={handleInputChange} /> */}
-              <InputField className=" max-sm:hidden" label="Customer ID" name="CustomerId" value={customerData.CustomerId} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("CustomerId", "Customer ID")} name="CustomerId" value={customerData.CustomerId} onChange={handleInputChange} />
               <div className=" max-sm:hidden">
-                <DateSelector label="Customer Date" value={customerData.CustomerDate} onChange={(val) => handleSelectChange("CustomerDate", val)} />
+                <DateSelector label={getLabel("CustomerDate", "Customer Date")} value={customerData.CustomerDate} onChange={(val) => handleSelectChange("CustomerDate", val)} />
               </div>
-              <InputField className=" max-sm:hidden" label="Customer Year" name="CustomerYear" value={customerData.CustomerYear} onChange={handleInputChange} />
-              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} label="Price" value={customerData.Price} onChange={(v) => handleSelectChange("Price", v)} />
-              <InputField className=" max-sm:hidden" label="URL" name="URL" value={customerData.URL??""} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label="Others" name="Others" value={customerData.Other} onChange={handleInputChange} />
-              <TextareaField label="Description" name="Description" value={customerData.Description} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label="Video" name="Video" value={customerData.Video} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label="Google Map" name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
-              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Verified) ? fieldOptions.Verified : []} label="Verified" value={customerData.Verified} onChange={(v) => handleSelectChange("Verified", v)} />
-                  
+              <InputField className=" max-sm:hidden" label={getLabel("CustomerYear", "Customer Year")} name="CustomerYear" value={customerData.CustomerYear} onChange={handleInputChange} />
+              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} label={getLabel("Price", "Price")} value={customerData.Price} onChange={(v) => handleSelectChange("Price", v)} />
+              <InputField className=" max-sm:hidden" label={getLabel("URL", "URL")} name="URL" value={customerData.URL ?? ""} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("Other", "Others")} name="Others" value={customerData.Other} onChange={handleInputChange} />
+              <TextareaField label={getLabel("Description", "Description")} name="Description" value={customerData.Description} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("Video", "Video")} name="Video" value={customerData.Video} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("GoogleMap", "Google Map")} name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
+              <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Verified) ? fieldOptions.Verified : []} label={getLabel("Verified", "Verified")} value={customerData.Verified} onChange={(v) => handleSelectChange("Verified", v)} />
+
             </div>
 
             <div className=" sm:flex flex-wrap my-5 gap-5">
-                <FileUpload label="Customer Images" multiple onChange={(e) => handleFileChange(e, "CustomerImage")} previews={imagePreviews} onRemove={handleRemoveImage} />
-                <FileUpload label="Site Plan" onChange={(e) => handleFileChange(e, "SitePlan")} previews={sitePlanPreview ? [sitePlanPreview] : []} onRemove={() => handleRemoveSitePlan()} />
-              </div>
+              <FileUpload label={getLabel("CustomerImage", "Customer Images")} multiple onChange={(e) => handleFileChange(e, "CustomerImage")} previews={imagePreviews} onRemove={handleRemoveImage} />
+              <FileUpload label={getLabel("SitePlan", "Site Plan")} onChange={(e) => handleFileChange(e, "SitePlan")} previews={sitePlanPreview ? [sitePlanPreview] : []} onRemove={() => handleRemoveSitePlan()} />
+            </div>
             <div className=" mt-10 w-full">
               <h2 className="text-xl font-semibold text-gray-700 mb-4 ">
-                  Additional Information
-                </h2>
-            <div className=" grid grid-cols-3 gap-6 max-lg:grid-cols-1 my-6">
-              {Object.keys(customFields).map((key) => (
-                <InputField
-                  key={key}
-                  className="max-sm:hidden"
-                  label={key}
-                  name={key}
-                  value={customFields[key]}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-                    handleCustomInputChange(key, e.target.value)
-                  }
-                />
-              ))}
-            </div>
+                Additional Information
+              </h2>
+              <div className=" grid grid-cols-3 gap-6 max-lg:grid-cols-1 my-6">
+                {Object.keys(customFields).map((key) => (
+                  <InputField
+                    key={key}
+                    className="max-sm:hidden"
+                    label={key}
+                    name={key}
+                    value={customFields[key]}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                      handleCustomInputChange(key, e.target.value)
+                    }
+                  />
+                ))}
+              </div>
 
             </div>
 

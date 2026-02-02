@@ -53,6 +53,7 @@ import BeatLoader from "react-spinners/BeatLoader"
 import HashLoader from "react-spinners/HashLoader"
 import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
+import { useCustomerFieldLabel } from "@/context/customer/CustomerFieldLabelContext";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -60,6 +61,7 @@ interface DeleteAllDialogDataInterface { }
 export default function Customer() {
   const router = useRouter();
   const hasInitialFetched = useRef(false);
+  const { getLabel } = useCustomerFieldLabel();
   /* fetch */
   const FETCH_CHUNK = 100;
   const [keywordInput, setKeywordInput] = useState("");
@@ -959,18 +961,17 @@ export default function Customer() {
     setIsWhatsappAllOpen(false);
   };
 
-
-  const phonetableheader = [{
-    key: "Campaign", label: "Campaign"
+ const phonetableheader = [{
+    key: "Campaign", label: getLabel("Campaign", "Campaign")
   },
   {
-    key: "Name", label: "Name"
+    key: "Name", label: getLabel("customerName", "Name")
   },
   {
-    key: "Location", label: "Location"
+    key: "Location", label: getLabel("Location", "Location")
   },
   {
-    key: "Description", label: "Description"
+    key: "Description", label: getLabel("Description", "Description")
   },
   {
     key: "ContactNumber", label: "Ph. No."
@@ -978,31 +979,31 @@ export default function Customer() {
 
   const phoneViewAllHaders = [
     {
-      key: "Campaign", label: "Campaign"
+      key: "Campaign", label: getLabel("Campaign", "Campaign")
     },
     {
-      key: "Type", label: "Customer Type"
+      key: "Type", label: getLabel("CustomerType", "Customer Type")
     },
     {
-      key: "SubType", label: "Customer Subtype"
+      key: "SubType", label: getLabel("CustomerSubType", "Customer Subtype")
     },
     {
-      key: "Name", label: "Name"
+      key: "Name", label: getLabel("customerName", "Name")
     },
     {
-      key: "Location", label: "Location"
+      key: "Location", label: getLabel("Location", "Location")
     },
     {
-      key: "Description", label: "Description"
+      key: "Description", label: getLabel("Description", "Description")
     },
     {
       key: "ContactNumber", label: "Contact No"
     },
     {
-      key: "AssignTo", label: "Assign To"
+      key: "AssignTo", label: getLabel("AssignTo", "Assign To")
     },
     {
-      key: "Date", label: "Date"
+      key: "Date", label: getLabel("CustomerDate", "Date")
     }
   ]
 
@@ -1151,7 +1152,7 @@ export default function Customer() {
           <DynamicAdvance>
             <ObjectSelect
               options={Array.isArray(fieldOptions?.Campaign) ? fieldOptions.Campaign : []}
-              label="Campaign"
+              label={getLabel("Campaign", "Campaign")}
               value={dependent.Campaign.id}
               getLabel={(item) => item?.Name || ""}
               getId={(item) => item?._id || ""}
@@ -1179,7 +1180,7 @@ export default function Customer() {
 
             <ObjectSelect
               options={Array.isArray(fieldOptions?.CustomerType) ? fieldOptions.CustomerType : []}
-              label="Customer Type"
+              label={getLabel("CustomerType", "Customer Type")}
               value={dependent.CustomerType.name}
               getLabel={(item) => item?.Name || ""}
               getId={(item) => item?._id || ""}
@@ -1207,7 +1208,7 @@ export default function Customer() {
 
             <ObjectSelect
               options={Array.isArray(fieldOptions?.CustomerSubtype) ? fieldOptions.CustomerSubtype : []}
-              label="Customer Subtype"
+              label={getLabel("CustomerSubType", "Customer Subtype")}
               value={dependent.CustomerSubType.name}
               getLabel={(item) => item?.Name || ""}
               getId={(item) => item?._id || ""}
@@ -1233,7 +1234,7 @@ export default function Customer() {
 
             <ObjectSelect
               options={Array.isArray(fieldOptions?.City) ? fieldOptions.City : []}
-              label="City"
+              label={getLabel("City", "City")}
               value={dependent.City.id}
               getLabel={(item) => item?.Name || ""}
               getId={(item) => item?._id || ""}
@@ -1258,7 +1259,7 @@ export default function Customer() {
             />
             <ObjectSelect
               options={Array.isArray(fieldOptions?.Location) ? fieldOptions.Location : []}
-              label="Location"
+              label={getLabel("Location", "Location")}
               value={dependent.Location.id}
               getLabel={(item) => item?.Name || ""}
               getId={(item) => item?._id || ""}
@@ -1407,7 +1408,7 @@ export default function Customer() {
                   <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-lg:grid-cols-2">
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.Campaign) ? fieldOptions.Campaign : []}
-                      label="Campaign"
+                      label={getLabel("Campaign", "Campaign")}
                       value={dependent.Campaign.id}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1435,7 +1436,7 @@ export default function Customer() {
 
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.CustomerType) ? fieldOptions.CustomerType : []}
-                      label="Customer Type"
+                      label={getLabel("CustomerType", "Customer Type")}
                       value={dependent.CustomerType.name}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1463,7 +1464,7 @@ export default function Customer() {
 
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.CustomerSubtype) ? fieldOptions.CustomerSubtype : []}
-                      label="Customer Subtype"
+                      label={getLabel("CustomerSubType", "Customer Subtype")}
                       value={dependent.CustomerSubType.name}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1489,7 +1490,7 @@ export default function Customer() {
 
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.City) ? fieldOptions.City : []}
-                      label="City"
+                      label={getLabel("City", "City")}
                       value={dependent.City.id}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1514,7 +1515,7 @@ export default function Customer() {
                     />
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.Location) ? fieldOptions.Location : []}
-                      label="Location"
+                      label={getLabel("Location", "Location")}
                       value={dependent.Location.id}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1538,7 +1539,7 @@ export default function Customer() {
                     />
                     <ObjectSelect
                       options={Array.isArray(fieldOptions?.SubLocation) ? fieldOptions.SubLocation : []}
-                      label="Sub Location"
+                      label={getLabel("SubLocation", "Sub Location")}
                       value={dependent.SubLocation.id}
                       getLabel={(item) => item?.Name || ""}
                       getId={(item) => item?._id || ""}
@@ -1559,8 +1560,8 @@ export default function Customer() {
                       }}
                       isSearchable
                     />
-                    <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label="ReferenceId" onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
-                    <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label="Price" onChange={(v) => handleSelectChange("Price", v)} isSearchable />
+                    <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label={getLabel("ReferenceId", "Reference Id")} onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
+                    <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label={getLabel("Price", "Price")} onChange={(v) => handleSelectChange("Price", v)} isSearchable />
 
                     <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
 
@@ -1783,16 +1784,16 @@ export default function Customer() {
                       </th>
 
                       <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left  max-w-[60px]">S.No.</th>
-                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[80px]">Campaign</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Customer Type</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Customer Subtype</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Name</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Description</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Location</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Contact No</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Assign To</th>
-                      <th className="px-3 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[100px]">ReferenceId</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Date</th>
+                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[80px]">{getLabel("Campaign", "Campaign")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerType", "Customer Type")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerSubType", "Customer Subtype")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("customerName", "Name")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("Description", "Description")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("Location", "Location")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("ContactNumber", "Contact No")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("AssignTo", "Assign To")}</th>
+                      <th className="px-3 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[100px]">{getLabel("ReferenceId", "Reference Id")}</th>
+                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerDate", "Date")}</th>
                       <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Actions</th>
                     </tr>
                   </thead>

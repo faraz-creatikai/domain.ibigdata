@@ -21,6 +21,7 @@ import Link from "next/link";
 import { Router } from "next/router";
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "@/theme/muiTheme";
+import { CustomerFieldLabelProvider } from "@/context/customer/CustomerFieldLabelContext";
 
 const poppins = Schibsted_Grotesk({
   weight: '400',
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthProvider>
           <CustomerImportProvider>
             <ContactImportProvider>
+            <CustomerFieldLabelProvider>
                <ThemeProvider theme={theme}>
               {isAdminPage ? (
                 <main className="min-h-screen ">{children}</main>
@@ -105,6 +107,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </ProtectedRoute>
               )}
               </ThemeProvider>
+              </CustomerFieldLabelProvider>
             </ContactImportProvider>
           </CustomerImportProvider>
         </AuthProvider>

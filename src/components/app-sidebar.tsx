@@ -16,6 +16,7 @@ import {
   LineChart,
   LucideCoins,
   ShieldUser,
+  Settings,
 } from "lucide-react";
 
 import { NavMain } from "../components/nav-main";
@@ -239,6 +240,16 @@ const data = {
       ],
     },
     {
+      title: "Settings",
+      url: "#",
+      icon: Settings,
+      items: [
+        {
+          title: "Customer Fields",
+          url: "/settings/customer/customer-fields",
+        },]
+    },
+    {
       title: "Users",
       url: "/users",
       icon: User2,
@@ -282,6 +293,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       return false;
     }
     return true;
+  }).map((item) => {
+    // Handle Settings submenu permissions
+    if (item.title === "Settings") {
+      return {
+        ...item,
+        items: item.items?.filter((subItem) => {
+          // Hide "Customer Fields" if not admin
+          if (
+            subItem.title === "Customer Fields" &&
+            admin?.role !== "administrator"
+          ) {
+            return false;
+          }
+          return true;
+        }),
+      };
+    }
+
+    return item;
   });
   return (
     <Sidebar collapsible="icon" className="" {...props}>
