@@ -32,7 +32,7 @@ const PopupMenu: React.FC<PopupMenuProps> = ({ children, onClose, isOpen = true 
       {isOpen && (
         <motion.div
           onClick={handleBackdropClick}
-          className="fixed z-50 top-0 left-0 px-0.5 backdrop-blur-[0.5px] w-screen grid place-items-center bg-gray-300/50"
+          className="fixed z-50 top-0 left-0  backdrop-blur-[0.5px] w-screen grid place-items-center bg-gray-300/50"
           style={{ height: '100dvh' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

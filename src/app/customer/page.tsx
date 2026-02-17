@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CiExport, CiSearch } from "react-icons/ci";
 import { IoIosArrowUp, IoIosArrowDown, IoMdClose } from "react-icons/io";
@@ -7,7 +7,7 @@ import Button from '@mui/material/Button';
 import SingleSelect from "@/app/component/SingleSelect";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ChevronsLeft, ChevronsRight, PlusSquare } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsLeft, ChevronsRight, PlusSquare, UserPlus } from "lucide-react";
 import ProtectedRoute from "../component/ProtectedRoutes";
 import toast, { Toaster } from "react-hot-toast";
 import { getCustomer, deleteCustomer, getFilteredCustomer, updateCustomer, assignCustomer, deleteAllCustomer } from "@/store/customer";
@@ -54,14 +54,23 @@ import HashLoader from "react-spinners/HashLoader"
 import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
 import { useCustomerFieldLabel } from "@/context/customer/CustomerFieldLabelContext";
+import Tablesetting from "../component/table/TableSetting";
+import FollowupAddDialog from "../component/popups/FollowupAddDialog";
+import { deleteFollowup, getFollowupByCustomerId } from "@/store/customerFollowups";
+import { customerFollowupAllDataInterface } from "@/store/customerFollowups.interface";
+import { FollowupDeleteDialogDataInterface } from "@/store/contactFollowups.interface";
+import { BsPersonFill } from "react-icons/bs";
+import GoogleMapDialog from "../component/popups/GoogleMapDialogue";
 
 
 interface DeleteAllDialogDataInterface { }
 
+
+
 export default function Customer() {
   const router = useRouter();
   const hasInitialFetched = useRef(false);
-  const { getLabel } = useCustomerFieldLabel();
+  const { getLabel, labels } = useCustomerFieldLabel();
   /* fetch */
   const FETCH_CHUNK = 100;
   const [keywordInput, setKeywordInput] = useState("");
@@ -103,6 +112,18 @@ export default function Customer() {
     useState<DeleteAllDialogDataInterface | null>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const [tableDialogcustomerData, setTableDialogCustomerData] = useState<customerGetDataInterface[]>([]);
+
+  const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const [selectedCustomerFollowupId, setSelectedCustomerFollowupId] = useState<string | null>(null);
+  const [followupDialogData, setFollowupDialogData] = useState<customerFollowupAllDataInterface[] | null>([]);
+  const [isfollowupDialogOpen, setIsFollowupDialogOpen] = useState(false);
+  const [isFollowupDeleteDialogOpen, setIsFollowupDeleteDialogOpen] = useState(false);
+  const [followupdeleteDialogData, setFollowupDeleteDialogData] = useState<FollowupDeleteDialogDataInterface | null>(null);
+
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+
+
 
   const scrollRef = useHorizontalScroll();
   const searchParams = useSearchParams();
@@ -149,11 +170,92 @@ export default function Customer() {
     SubLocation: { id: "", name: "" },
   });
 
+  //this is for setting button
+  // for header
+  type Column = {
+    key: string;
+    label: string;
+    isPinned: boolean;
+    visible: boolean;
+  };
+
+
+
+
+  const [newHeader, setNewHeader] = useState("");
+  //end here setting button 
 
   const [customerData, setCustomerData] = useState<customerGetDataInterface[]>([]);
   const [customerAdv, setCustomerAdv] = useState<CustomerAdvInterface[]>([]);
   const [exportingCustomerData, setExportingCustomerData] = useState<customerGetDataInterface[]>([]);
   const [duplicateContacts, setDuplicateContacts] = useState<Record<string, boolean>>({});
+
+  const dynamicFieldKeys = useMemo(() => {
+    if (!customerData.length) return [];
+
+    const keys = new Set<string>();
+
+    customerData.forEach(customer => {
+      if (customer.CustomerFields) {
+        Object.keys(customer.CustomerFields).forEach(key => {
+          keys.add(key);
+        });
+      }
+    });
+
+    return Array.from(keys);
+  }, [customerData]);
+  const DEFAULT_COLUMNS: Column[] = useMemo(() => {
+    const staticColumns = [
+      { key: "sno", label: "S.No.", isPinned: true, visible: true },
+      { key: "campaign", label: getLabel("Campaign", "Campaign"), isPinned: true, visible: true },
+      { key: "type", label: getLabel("CustomerType", "CustomerType"), isPinned: true, visible: true },
+      { key: "subtype", label: getLabel("CustomerSubType", "Customer Subtype"), isPinned: true, visible: true },
+      { key: "name", label: getLabel("customerName", "Customer Name"), isPinned: true, visible: true },
+      { key: "City", label: getLabel("City", "City"), isPinned: true, visible: true },
+      { key: "Area", label: getLabel("Area", "Area"), isPinned: true, visible: true },
+      { key: "Email", label: getLabel("Email", "Email"), isPinned: true, visible: true },
+      { key: "Facillities", label: getLabel("Facillities", "Facillities"), isPinned: true, visible: true },
+      { key: "CustomerId", label: getLabel("CustomerId", "Customer Id"), isPinned: true, visible: true },
+      { key: "date", label: getLabel("CustomerDate", "Date"), isPinned: true, visible: true },
+      { key: "CustomerYear", label: getLabel("CustomerYear", "Customer Year"), isPinned: true, visible: true },
+      { key: "Other", label: getLabel("Other", "Other"), isPinned: true, visible: true },
+      { key: "description", label: getLabel("Description", "Description"), isPinned: true, visible: true },
+      { key: "location", label: getLabel("Location", "Location"), isPinned: true, visible: true },
+      { key: "sublocation", label: getLabel("SubLocation", "Sub Location"), isPinned: true, visible: true },
+      { key: "contact", label: getLabel("ContactNumber", "Contact No"), isPinned: true, visible: true },
+      { key: "assign", label: getLabel("AssignTo", "Assign To"), isPinned: true, visible: true },
+      { key: "reference", label: getLabel("ReferenceId", "Reference Id"), isPinned: true, visible: true },
+      { key: "Adderess", label: getLabel("Adderess", "Adderess"), isPinned: true, visible: true },
+      { key: "url", label: getLabel("URL", "URL"), isPinned: true, visible: true },
+      { key: "video", label: getLabel("Video", "Video"), isPinned: true, visible: true },
+      { key: "googlemap", label: getLabel("GoogleMap", "GoogleMap"), isPinned: true, visible: true },
+      { key: "price", label: getLabel("Price", "Price"), isPinned: true, visible: true },
+      /* { key: "actions", label: "Actions", isPinned: true, visible: true }, */
+    ]
+
+    const actionsColumn = {
+      key: "actions",
+      label: "Actions",
+      isPinned: true,
+      visible: true,
+    };
+    const dynamicColumns = dynamicFieldKeys.map(key => ({
+      key: `cf_${key}`, // prefix to avoid collision
+      label: key,
+      isPinned: false,
+      visible: false,
+    }));
+
+    return [...staticColumns, ...dynamicColumns, actionsColumn];
+  }, [labels, dynamicFieldKeys]);
+  // console.log("this is my default columns", DEFAULT_COLUMNS);
+  const [columns, setColumns] = useState<Column[]>(() => {
+    const saved = localStorage.getItem("table-columns");
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+  });
+
+
 
   const STEPS = {
     SEARCH: "Searching Customer Data",
@@ -177,9 +279,24 @@ export default function Customer() {
   const wait = (ms: number) =>
     new Promise(resolve => setTimeout(resolve, ms));
 
+  // header effect
+  useEffect(() => {
+    setColumns(prevColumns =>
+      DEFAULT_COLUMNS.map(defaultCol => {
+        const existing = prevColumns.find(c => c.key === defaultCol.key);
+
+        return existing
+          ? { ...existing, label: defaultCol.label } // keep user settings
+          : defaultCol; // new column added
+      })
+    );
+  }, [DEFAULT_COLUMNS]);
 
 
 
+  useEffect(() => {
+    localStorage.setItem("table-columns", JSON.stringify(columns));
+  }, [columns]);
 
 
 
@@ -268,6 +385,28 @@ export default function Customer() {
   };
 
 
+  const handleFollowups = async (id: string, Name: string) => {
+    const data = await getFollowupByCustomerId(id as string);
+    if (data) {
+      console.log("Followups customer data", data)
+      setFollowupDialogData(data.map((item: any) => ({
+        _id: item._id,
+        customer: item.customer._id,
+        Name: Name,
+        StartDate: item.StartDate,
+        StatusType: item.StatusType,
+        FollowupNextDate: item.FollowupNextDate,
+        Description: item.Description,
+      })));
+      if (data.length === 0)
+        toast.error("no followup available")
+      return;
+    }
+    toast.error("no followup available")
+
+  }
+
+
   const mapCustomer = (item: any) => {
     const date = new Date(item.createdAt);
     const formattedDate =
@@ -285,14 +424,26 @@ export default function Customer() {
       Email: item.Email,
       City: item.City,
       Location: item.Location,
+      Adderess: item.Adderess,
       SubLocation: item.SubLocation,
       ContactNumber: item.ContactNumber?.slice(0, 10),
       ReferenceId: item.ReferenceId,
       AssignTo: item.AssignTo?.name,
       isFavourite: item.isFavourite,
       isChecked: item.isChecked,
-      Date: item.CustomerDate ? formatDateDMY(item.CustomerDate) : formattedDate,
+      Date:
+        item.CustomerDate === "N/A"
+          ? "N/A"
+          : item.CustomerDate
+            ? formatDateDMY(item.CustomerDate)
+            : formattedDate,
+      CustomerImage: item.CustomerImage || "",
       SitePlan: item.SitePlan || "",
+      URL: item.URL || "",
+      Video: item.Video || "",
+      GoogleMap: item.GoogleMap || "",
+      Price: item.Price || "",
+      CustomerFields: item.CustomerFields || {},
     };
   };
 
@@ -371,6 +522,7 @@ export default function Customer() {
         await refreshCustomersWithLastFilters();
         return;
       }
+      handleTableDialogData(data.ContactNumber);
       await getCustomers();
     }
   };
@@ -545,7 +697,7 @@ export default function Customer() {
     }
 
     setCustomerTableLoader(false);
-    console.log(" filter date length ", data.length)
+    // console.log(" filter date length ", data.length)
 
     return data;
 
@@ -581,6 +733,8 @@ export default function Customer() {
     setAiLoading(false)
     setIsFilteredTrigger(false);
     await getCustomers();
+
+    getTotalCustomerPage();
   };
 
   const refreshCustomersWithLastFilters = async () => {
@@ -654,7 +808,7 @@ export default function Customer() {
     const response = await getAllAdmins();
 
     if (response) {
-      console.log("response ", response);
+      // console.log("response ", response);
 
       const admins = response?.admins?.filter((e) => e.role === "user" || e.role === "city_admin") ?? []; //ensure only user and city_admin roles are fetched
 
@@ -673,10 +827,10 @@ export default function Customer() {
     const response = await getMail();
 
     if (response) {
-      console.log("response ", response);
+      //  console.log("response ", response);
 
       const mailtemplates = response?.filter((e: any) => e.status === "Active") ?? []; //ensure only user roles are fetched
-      console.log(" mail data ", response)
+      //  console.log(" mail data ", response)
       setMailtemplates(
         mailtemplates.map((item: any): mailGetDataInterface => ({
           _id: item?._id ?? "",
@@ -693,10 +847,10 @@ export default function Customer() {
     const response = await getWhatsapp();
 
     if (response) {
-      console.log("response ", response);
+      //console.log("response ", response);
 
       const whatsapptemplates = response?.filter((e: any) => e.status === "Active") ?? []; //ensure only active status are fetched
-      console.log(" mail data ", response)
+      //console.log(" mail data ", response)
       setWhatsappTemplates(
         whatsapptemplates.map((item: any): whatsappGetDataInterface => ({
           _id: item?._id ?? "",
@@ -902,7 +1056,7 @@ export default function Customer() {
       assignToId: selectedUser,
     };
 
-    console.log(payload)
+    // console.log(payload)
 
     const response = await assignCustomer(payload);
     if (response) {
@@ -926,7 +1080,7 @@ export default function Customer() {
       templateId: selectedMailtemplate,
     };
 
-    console.log(payload)
+    // console.log(payload)
 
     const response = await emailAllCustomer(payload);
     if (response) {
@@ -949,7 +1103,7 @@ export default function Customer() {
       templateId: selectedWhatsapptemplate,
     };
 
-    console.log(payload)
+    // console.log(payload)
 
     const response = await whatsappAllCustomer(payload);
     if (response) {
@@ -961,7 +1115,7 @@ export default function Customer() {
     setIsWhatsappAllOpen(false);
   };
 
- const phonetableheader = [{
+  const phonetableheader = [{
     key: "Campaign", label: getLabel("Campaign", "Campaign")
   },
   {
@@ -997,6 +1151,9 @@ export default function Customer() {
       key: "Description", label: getLabel("Description", "Description")
     },
     {
+      key: "Adderess", label: "Address"
+    },
+    {
       key: "ContactNumber", label: "Contact No"
     },
     {
@@ -1007,7 +1164,27 @@ export default function Customer() {
     }
   ]
 
+  /* followup navigations */
   const addFollowup = (id: string) => router.push(`/followups/customer/add/${id}`);
+  const editThisFollowup = async (id: string) => {
+    router.push(`/followups/customer/edit/${id}`);
+  }
+
+  const deleteThisFollowup = async (data: FollowupDeleteDialogDataInterface) => {
+    //alert(id)
+    if (!data) return;
+    const response = await deleteFollowup(data.id);
+    if (response && response.success) {
+      toast.success("Followup deleted successfully");
+      setIsFollowupDialogOpen(false);
+      setIsFollowupDeleteDialogOpen(true);
+      setFollowupDeleteDialogData(null);
+      setFollowupDialogData([]);
+      //   getFollowups();
+    } else {
+      toast.error("Failed to delete followup");
+    }
+  }
 
 
 
@@ -1018,7 +1195,7 @@ export default function Customer() {
     queryParams.append("ContactNumber", contactno);
     const data = await getFilteredCustomer(queryParams.toString());
     if (data.length > 0) {
-      console.log(" data of contact no is ", data)
+      // console.log(" data of contact no is ", data)
       const mapped = data.map(mapCustomer);
       setTableDialogCustomerData(mapped)
       return mapped
@@ -1045,7 +1222,10 @@ export default function Customer() {
     return hasDuplicates;
   };
 
-
+  const addFollowupFromDialogue = (id: string) => {
+    setSelectedCustomerFollowupId(id)
+    setIsFollowupOpen(true);
+  };
 
   useEffect(() => {
     currentRows.forEach(item => {
@@ -1079,6 +1259,8 @@ export default function Customer() {
     setAiLoading(false);
 
   };
+
+
 
 
 
@@ -1130,6 +1312,9 @@ export default function Customer() {
         onDelete={handleFavourite}
       />
 
+    
+
+
       {/* customer by contact number */}
       <TableDialog
         isOpen={isTableDialogOpen}
@@ -1138,8 +1323,229 @@ export default function Customer() {
         onClose={() => {
           setIsTableDialogOpen(false);
         }}
+        renderActions={(item) => (
+          <div className="grid grid-cols-2 max-md:flex gap-3 items-center h-full">
+
+            <Button
+              sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+              /* onClick={() => router.push(`/followups/customer/add/${item._id}`)} */
+              onClick={() => {
+                setSelectedCustomerFollowupId(item._id);
+                setIsFollowupOpen(true);
+              }}
+            >
+              <MdAdd />
+            </Button>
+
+            <Button
+              sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+              onClick={() => router.push(`/customer/edit/${item._id}`)}
+            >
+              <MdEdit />
+            </Button>
+
+            <Button
+              sx={{ backgroundColor: "#FDECEA", color: "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+              onClick={() => {
+                setIsDeleteDialogOpen(true);
+                setDialogType("delete");
+                setDialogData({
+                  id: item._id,
+                  customerName: item.Name,
+                  ContactNumber: item.ContactNumber,
+                });
+              }}
+            >
+              <MdDelete />
+            </Button>
+
+
+          </div>
+        )}
       />
 
+
+      {/* Delete Dialog */}
+      <DeleteDialog<DeleteDialogDataInterface>
+        isOpen={isDeleteDialogOpen}
+        title="Are you sure you want to delete this customer?"
+        data={dialogData}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setDialogData(null);
+        }}
+        onDelete={handleDelete}
+      />
+
+      <DeleteDialog<DeleteAllDialogDataInterface>
+        isOpen={isDeleteAllDialogOpen}
+        title="Are you sure you want to delete ALL customers?"
+        data={deleteAllDialogData}
+        onClose={() => {
+          setIsDeleteAllDialogOpen(false);
+          setDeleteAllDialogData(null);
+        }}
+        onDelete={handleDeleteAll}
+      />
+
+      <DeleteDialog<FollowupDeleteDialogDataInterface>
+        isOpen={isFollowupDeleteDialogOpen}
+        title={`Are you sure you want delete the followup for customer?`}
+        data={followupdeleteDialogData}
+        onClose={() => {
+          setFollowupDeleteDialogData(null)
+          setIsFollowupDeleteDialogOpen(false);
+        }}
+        onDelete={deleteThisFollowup}
+      />
+
+      <FollowupAddDialog
+        isOpen={isFollowupOpen}
+        customerId={selectedCustomerFollowupId}
+        onClose={() => {
+          setIsFollowupOpen(false)
+          setSelectedCustomerFollowupId(null)
+        }}
+      />
+      {
+        isfollowupDialogOpen && Array.isArray(followupDialogData) && followupDialogData.length > 0 && (
+          <PopupMenu onClose={() => { setIsFollowupDialogOpen(false); setFollowupDialogData([]); }}>
+            <div className="flex flex-col border border-white/20 overflow-hidden bg-white/80 backdrop-blur-xl text-[var(--color-secondary-darker)] rounded-2xl shadow-2xl p-0 max-w-[800px] gap-0 m-2 w-full max-h-[85vh] overflow-hidden ring-1 ring-black/5">
+              {/* Header - Glassmorphism effect */}
+              <div className="flex flex-col justify-between  p-6 py-5 bg-gradient-to-r from-[var(--color-secondary-darker)] to-[var(--color-secondary)] text-white sticky top-0 z-10 backdrop-blur-md bg-opacity-95">
+                <div className=" flex justify-between items-center">
+                  <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 tracking-tight">
+                    <div className="flex text-[var(--color-primary-light)] items-center gap-2">
+                      <span className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h2a1 1 0 100-2H6V7h5a1 1 0 011-1h5a1 1 0 011 1v5h2V7a3 3 0 00-3-3h-5a2 2 0 00-2 2H6z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                      <span>Customer</span>
+                      <span className=" font-black drop-shadow-sm">Followups</span>
+                    </div>
+
+                  </h2>
+                  <button
+                    className="cursor-pointer hover:bg-white/20 p-2 rounded-full transition-all duration-300 ease-out hover:rotate-90 active:scale-95 group"
+                    onClick={() => {
+                      setFollowupDialogData(null)
+                      setIsFollowupDialogOpen(false);
+                    }}
+                  >
+                    <IoMdClose className="w-6 h-6 group-hover:text-[var(--color-primary)] transition-colors" />
+                  </button>
+                </div>
+                <div className=" flex items-center gap-2 ml-[45px] mt-2 font-light  text-[var(--color-primary-light)]">
+                  <span className=" bg-[var(--color-primary-light)] p-1 rounded-full"><BsPersonFill className=" text-[var(--color-primary-dark)]" /></span>
+                  <span>{followupDialogData[0].Name ?? ""}
+                  </span>
+                </div>
+              </div>
+
+              {/* Content Area with custom scrollbar */}
+              <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-2 md:p-6 space-y-4 scrollbar-thin scrollbar-thumb-[var(--color-primary)]/30 scrollbar-track-transparent hover:scrollbar-thumb-[var(--color-primary)]/50">
+                {
+                  followupDialogData.map((item, index) => (
+                    <div
+                      key={item._id ?? +index}
+                      className="group relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border border-gray-100 rounded-xl p-3 shadow-sm hover:shadow-xl hover:border-[var(--color-primary)]/20 transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden"
+                    >
+                      {/* Decorative gradient line */}
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-secondary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                      {/* Content Section */}
+                      <div className="flex flex-col gap-3 flex-1 w-full md:w-auto pl-0 md:pl-2">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                            Follow-up #{index + 1}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold ${item.StatusType?.toLowerCase().includes('complete') || item.StatusType?.toLowerCase().includes('done')
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : item.StatusType?.toLowerCase().includes('pending') || item.StatusType?.toLowerCase().includes('wait')
+                              ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                              : 'bg-blue-100 text-blue-700 border border-blue-200'
+                            }`}>
+                            {item.StatusType}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <span className="p-1.5 bg-gray-50 rounded-md text-[var(--color-secondary)]">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </span>
+                            <div>
+                              <p className="text-xs mb-1 text-gray-400 font-medium uppercase tracking-wider">Follow-up Date</p>
+                              <p className="font-semibold text-[var(--color-secondary-darker)]">{item.StartDate}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <span className="p-1.5 bg-gray-50 rounded-md text-[var(--color-secondary)]">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </span>
+                            <div>
+                              <p className="text-xs mb-1 text-gray-400 font-medium uppercase tracking-wider">Next Follow-up</p>
+                              <p className="font-semibold text-[var(--color-secondary-darker)]">{item.FollowupNextDate}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                          <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Description</p>
+                          <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{item.Description}</p>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-row gap-3 justify-end items-center w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 mt-2 md:mt-0">
+                        <Button
+                          sx={{
+                            backgroundColor: "#E8F5E9",
+                            color: "var(--color-primary)",
+                            minWidth: "40px",
+                            height: "40px",
+                            borderRadius: "8px",
+                          }}
+                          onClick={() => editThisFollowup(item._id ?? "")}
+                        >
+                          <MdEdit />
+                        </Button>
+
+                        <Button
+                          sx={{
+                            backgroundColor: "#FDECEA",
+                            color: "#C62828",
+                            minWidth: "40px",
+                            height: "40px",
+                            borderRadius: "8px",
+                          }}
+                          onClick={() => {
+                            setIsFollowupDialogOpen(false);
+                            setIsFollowupDeleteDialogOpen(true);
+                            setFollowupDeleteDialogData({
+                              id: item._id ?? "",
+                              Name: item.Name ?? ""
+                            });
+                          }}
+                        >
+                          <MdDelete />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </PopupMenu>
+        )
+      }
 
       {/* Mobile Customer Page */}
       <div className=" sm:hidden min-h-[calc(100vh-56px)] overflow-auto max-sm:py-2">
@@ -1295,7 +1701,7 @@ export default function Customer() {
           leads={customerData}
           labelLeads={phonetableheader}
           allLabelLeads={phoneViewAllHaders}
-          onAdd={(id) => addFollowup(id)}
+          onAdd={(id) => addFollowupFromDialogue(id)}
           onEdit={(id) => router.push(`/customer/edit/${id}`)}
           onWhatsappClick={(lead) => {
             setSelectedCustomers([lead._id]);
@@ -1310,39 +1716,41 @@ export default function Customer() {
           onFavourite={(lead) => {
             handleFavouriteToggle(lead._id, lead.Name, lead.ContactNumber, lead.isFavourite ?? false)
           }}
+          onViewFollowup={(id, Name) => {
+            setIsFollowupDialogOpen(true);
+            handleFollowups(id, Name);
+          }}
+          onGoogleMapViewAddress={(address) => {
+            if (!address) return;
+            setSelectedAddress(address);
+            setIsMapOpen(true);
+          }}
           loader={customerTableLoader}
           hasMoreCustomers={hasMoreCustomers}
           fetchMore={fetchMore}
+          duplicateContacts={duplicateContacts}
+          onViewDuplicate={(contactNumber) => {
+            setIsTableDialogOpen(true);
+            handleTableDialogData(contactNumber);
+          }}
         />
+        
 
       </div>
+
+        <GoogleMapDialog
+        isOpen={isMapOpen}
+        address={selectedAddress}
+        onClose={() => {
+          setIsMapOpen(false);
+          setSelectedAddress(null);
+        }}
+      />
 
       {/* Desktop Customer page */}
       <div className=" min-h-[calc(100vh-56px)] max-sm:hidden overflow-auto max-md:py-10">
 
 
-        {/* Delete Dialog */}
-        <DeleteDialog<DeleteDialogDataInterface>
-          isOpen={isDeleteDialogOpen}
-          title="Are you sure you want to delete this customer?"
-          data={dialogData}
-          onClose={() => {
-            setIsDeleteDialogOpen(false);
-            setDialogData(null);
-          }}
-          onDelete={handleDelete}
-        />
-
-        <DeleteDialog<DeleteAllDialogDataInterface>
-          isOpen={isDeleteAllDialogOpen}
-          title="Are you sure you want to delete ALL customers?"
-          data={deleteAllDialogData}
-          onClose={() => {
-            setIsDeleteAllDialogOpen(false);
-            setDeleteAllDialogData(null);
-          }}
-          onDelete={handleDeleteAll}
-        />
 
 
 
@@ -1685,7 +2093,7 @@ export default function Customer() {
 
                   </div>
 
-                  <div className={` flex justify-center items-center w-[30%] transition duration-300  ${toggleAiGenieSearchBy?" lg:-mt-32":" lg:mt-5"} `}>
+                  <div className={` flex justify-center items-center w-[30%] transition duration-300  ${toggleAiGenieSearchBy ? " lg:-mt-32" : " lg:mt-5"} `}>
                     {!aiLoading ? <button type="submit" className="border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
                       Explore
                     </button> : <button type="button" className="flex gap-1 justify-center items-center border border-[var(--color-primary)]  bg-[var(--color-primary)] text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
@@ -1706,8 +2114,9 @@ export default function Customer() {
 
               </div>
             </div>
-            <div className=" overflow-auto relative" ref={scrollRef}>
-              <div className=" flex justify-between items-center sticky top-0 left-0 w-full">
+            <div className="  relative" ref={scrollRef}>
+
+              <div className=" flex justify-between items-center sticky top-0 left-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full">
                 <div className="flex gap-10 items-center px-3 py-4 min-w-max text-gray-700">
 
                   <label htmlFor="selectall" className=" relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)]  rounded-tr-sm rounded-br-sm  border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer">
@@ -1761,20 +2170,26 @@ export default function Customer() {
 
 
                 </div>
+                {
+                  isFilteredTrigger && <p className={`text-gray-400 font-light text-xs mx-3  mt-2  flex items-center gap-[1px] `}>
+                    Customers Found {totalCustomers}
+                  </p>
+                }
                 {selectedCustomers.length > 0 && <p className=" text-gray-400 font-extralight text-sm mx-3">selected {selectedCustomers.length}</p>}
               </div>
-              <div className=" max-h-[600px] overflow-y-auto">
+              <Tablesetting columns={columns} setColumns={setColumns} />
+              <div className=" max-h-[600px]  w-full overflow-y-auto">
                 <table className="table-auto relative w-full border-separate border-spacing-0 text-sm border border-gray-200">
-                  <thead className="bg-[var(--color-primary)] text-white sticky top-0 left-0 z-[5]">
+                  <thead className="bg-[var(--color-primary)] h-16 text-white sticky top-0 left-0 z-[5]">
                     <tr>
 
                       {/* ✅ SELECT ALL CHECKBOX COLUMN */}
-                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left">
+                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] bg-[var(--color-primary)] sticky left-0 z-20 text-left">
 
                         <input
                           id="selectall"
                           type="checkbox"
-                          className=" hidden"
+                          className="hidden"
                           checked={
                             currentRows.length > 0 &&
                             currentRows.every((r) => selectedCustomers.includes(r._id))
@@ -1783,18 +2198,18 @@ export default function Customer() {
                         />
                       </th>
 
-                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left  max-w-[60px]">S.No.</th>
-                      <th className="px-2 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[80px]">{getLabel("Campaign", "Campaign")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerType", "Customer Type")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerSubType", "Customer Subtype")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("customerName", "Name")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("Description", "Description")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("Location", "Location")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("ContactNumber", "Contact No")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("AssignTo", "Assign To")}</th>
-                      <th className="px-3 py-3 border border-[var(--color-secondary-dark)] text-left max-w-[100px]">{getLabel("ReferenceId", "Reference Id")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">{getLabel("CustomerDate", "Date")}</th>
-                      <th className="px-4 py-3 border border-[var(--color-secondary-dark)] text-left">Actions</th>
+                      {columns
+                        .filter(col => col.visible)
+                        .map((header, index) => (
+                          <th
+                            key={header.key}
+                            className={`px-2 py-3 border border-[var(--color-secondary-dark)] text-left  
+                ${header.key === "sno" ? "sticky left-7.5 z-20 bg-[var(--color-primary)]" : ""}`}
+                          >
+                            {header.label}
+                          </th>
+                        ))}
+
                     </tr>
                   </thead>
 
@@ -1805,11 +2220,11 @@ export default function Customer() {
                           Loading customers...
                         </td>
                       </tr> : currentRows.length > 0 ? (
-                        currentRows.map((item, index) => {
-                          return <tr key={item._id} className="border-t hover:bg-[#f7f6f3] transition-all duration-200">
+                        currentRows.map((item, index) => (
+                          <tr key={item._id} className="border-t hover:bg-[#f7f6f3] transition-all duration-200">
 
                             {/* ✅ ROW CHECKBOX */}
-                            <td className="px-2 py-3 border border-gray-200">
+                            <td className="px-2 py-3 sticky left-0 bg-white  border border-gray-200">
                               <input
                                 type="checkbox"
                                 checked={selectedCustomers.includes(item._id)}
@@ -1817,159 +2232,267 @@ export default function Customer() {
                               />
                             </td>
 
-                            <td className="px-2 py-3 border border-gray-200 break-all whitespace-normal max-w-[60px]">{(currentTablePage - 1) * rowsPerTablePage + (index + 1)}</td>
-                            <td className="px-2 py-3 border border-gray-200 break-all whitespace-normal max-w-[60px]">{item.Campaign}</td>
-                            <td className="px-2 py-3 border border-gray-200 break-all whitespace-normal max-w-[80px]">{item.Type}</td>
-                            <td className="px-2 py-3 border  border-gray-200 break-all whitespace-normal max-w-[90px] ">{item.SubType}</td>
-                            <td className="px-2 py-3 border border-gray-200  ">{item.Name}</td>
-                            <td
-                              className={`px-2 py-3 border border-gray-200 break-all whitespace-normal max-w-[160px] ${item.Description ? "min-w-[160px]" : ""
-                                }`}
-                            >
-                              {item.Description}
-                            </td>
-                            <td className="px-2 py-3 border border-gray-200">{item.Location}</td>
-                            <td className="px-2 py-3 border border-gray-200 break-all text-center whitespace-normal max-w-[140px]">{(item.ContactNumber) && <>{<div className=" "
+                            {columns.filter(col => col.visible).map((col) => {
+                              let cellValue;
+                              if (col.key.startsWith("cf_")) {
+                                const originalKey = col.key.replace("cf_", "");
+                                cellValue = item.CustomerFields?.[originalKey] ?? "-";
+                              } else {
+                                switch (col.key) {
+                                  case "sno":
+                                    cellValue = (currentTablePage - 1) * rowsPerTablePage + (index + 1);
+                                    break;
+                                  case "campaign":
+                                    cellValue = item.Campaign;
+                                    break;
+                                  case "type":
+                                    cellValue = item.Type;
+                                    break;
+                                  case "subtype":
+                                    cellValue = item.SubType;
+                                    break;
+                                  case "City":
 
-                            >{item.ContactNumber}</div>}<span className=" flex"> <Button
-                              component="a"
-                              href={`tel:${item.ContactNumber}`}
-                              sx={{
-                                backgroundColor: "#E8F5E9",
-                                color: "var(--color-primary)",
-                                minWidth: "14px",
-                                height: "24px",
-                                borderRadius: "8px",
-                                margin: "4px"
-                              }} ><FaPhone size={12} /></Button>
-                                <Button
-                                  sx={{
-                                    backgroundColor: "#E8F5E9",
-                                    color: "var(--color-primary)",
-                                    minWidth: "14px",
-                                    height: "24px",
-                                    borderRadius: "8px",
-                                    margin: "4px"
-                                  }}
-                                  onClick={() => {
-                                    setSelectedCustomers([item._id])
-                                    setSelectUser(item._id)
-                                    setIsMailAllOpen(true);
-                                    fetchEmailTemplates();
-                                  }}
-                                ><MdEmail size={14} /></Button>
-                                <Button
-                                  onClick={() => {
-                                    setSelectedCustomers([item._id]);
-                                    setSelectUser(item._id);
-                                    setIsWhatsappAllOpen(true);
-                                    fetchWhatsappTemplates()
+                                    cellValue = item.City;
+                                    break;
+                                  case "Area":
+                                    cellValue = item.Area;
+                                    break;
+                                  case "Email":
+                                    cellValue = item.Email;
+                                    break;
 
-                                  }}
-                                  sx={{
-                                    backgroundColor: "#E8F5E9",
-                                    color: "var(--color-primary)",
-                                    minWidth: "14px",
-                                    height: "24px",
-                                    borderRadius: "8px",
-                                    margin: "4px"
-                                  }} ><FaWhatsapp size={14} /></Button>
+                                  case "Facillities":
+                                    cellValue = item.Facillities;
+                                    break;
 
-                              </span>
-                              {duplicateContacts[item.ContactNumber] && <span>
-                                <Button
-                                  onClick={() => {
-                                    setIsTableDialogOpen(true);
-                                    handleTableDialogData(item.ContactNumber);
-                                  }}
-                                  sx={{
-                                    backgroundColor: "#E8F5E9",
-                                    color: "var(--color-primary)",
-                                    minWidth: "100px",
-                                    height: "24px",
-                                    borderRadius: "8px",
-                                    margin: "4px"
-                                  }} >
-                                  <FaEye size={12} />
-                                </Button>
-                              </span>}
+                                  case "CustomerId":
+                                    cellValue = item.CustomerId;
+                                    break;
+                                  case "Adderess":
+                                    cellValue = (<>
+                                      <span
+                                        className="text-blue-600 cursor-pointer underline"
+                                        onClick={() => {
+                                          setSelectedAddress(item.Adderess);
+                                          setIsMapOpen(true);
+                                        }}
+                                      >
+                                        {item.Adderess}
+                                      </span>
 
-                            </>
-                            }
-                            </td>
-                            <td className="px-2 py-3 border border-gray-200">{item.AssignTo}</td>
-                            <td className="px-2 py-3 border border-gray-200 break-all whitespace-normal max-w-[70px]">{item.ReferenceId}</td>
-                            <td className="px-2 py-3 border border-gray-200 min-w-[100px]">{item.Date}</td>
+                                    </>);
+                                    break;
+                                  case "CustomerYear":
+                                    cellValue = item.CustomerYear;
+                                    break; case "Other":
+                                    cellValue = item.Other;
+                                    break;
+                                  case "name":
+                                    cellValue = item.Name;
+                                    break;
+                                  case "description":
+                                    cellValue = item.Description;
+                                    break;
+                                  case "location":
+                                    cellValue = item.Location;
+                                    break;
+                                  case "sublocation":
+                                    cellValue = item.SubLocation;
+                                    break;
+                                  case "contact":
+                                    cellValue = (
+                                      <>
+                                        {item.ContactNumber && (
+                                          <>
+                                            <div className=" text-center">{item.ContactNumber}</div>
+                                            <span className="flex">
+                                              <Button
+                                                component="a"
+                                                href={`tel:${item.ContactNumber}`}
+                                                sx={{
+                                                  backgroundColor: "#E8F5E9",
+                                                  color: "var(--color-primary)",
+                                                  minWidth: "14px",
+                                                  height: "24px",
+                                                  borderRadius: "8px",
+                                                  margin: "4px"
+                                                }}
+                                              >
+                                                <FaPhone size={12} />
+                                              </Button>
+                                              <Button
+                                                sx={{
+                                                  backgroundColor: "#E8F5E9",
+                                                  color: "var(--color-primary)",
+                                                  minWidth: "14px",
+                                                  height: "24px",
+                                                  borderRadius: "8px",
+                                                  margin: "4px"
+                                                }}
+                                                onClick={() => {
+                                                  setSelectedCustomers([item._id]);
+                                                  setSelectUser(item._id);
+                                                  setIsMailAllOpen(true);
+                                                  fetchEmailTemplates();
+                                                }}
+                                              >
+                                                <MdEmail size={14} />
+                                              </Button>
+                                              <Button
+                                                onClick={() => {
+                                                  setSelectedCustomers([item._id]);
+                                                  setSelectUser(item._id);
+                                                  setIsWhatsappAllOpen(true);
+                                                  fetchWhatsappTemplates();
+                                                }}
+                                                sx={{
+                                                  backgroundColor: "#E8F5E9",
+                                                  color: "var(--color-primary)",
+                                                  minWidth: "14px",
+                                                  height: "24px",
+                                                  borderRadius: "8px",
+                                                  margin: "4px"
+                                                }}
+                                              >
+                                                <FaWhatsapp size={14} />
+                                              </Button>
+                                            </span>
+                                            {duplicateContacts[item.ContactNumber] && (
+                                              <span>
+                                                <Button
+                                                  onClick={() => {
+                                                    setIsTableDialogOpen(true);
+                                                    handleTableDialogData(item.ContactNumber);
+                                                  }}
+                                                  sx={{
+                                                    backgroundColor: "#E8F5E9",
+                                                    color: "var(--color-primary)",
+                                                    minWidth: "100px",
+                                                    height: "24px",
+                                                    borderRadius: "8px",
+                                                    margin: "4px"
+                                                  }}
+                                                >
+                                                  <FaEye size={12} />
+                                                </Button>
+                                              </span>
+                                            )}
+                                          </>
+                                        )}
+                                      </>
+                                    );
+                                    break;
+                                  case "assign":
+                                    cellValue = item.AssignTo;
+                                    break;
+                                  case "reference":
+                                    cellValue = item.ReferenceId;
+                                    break;
+                                  case "date":
+                                    cellValue = item.Date;
+                                    break;
+                                  case "url":
+                                    cellValue = item.URL;
+                                    break;
+                                  case "video":
+                                    cellValue = item.Video;
+                                    break;
+                                  case "googlemap":
+                                    cellValue = item.GoogleMap;
+                                    break;
+                                  case "price":
+                                    cellValue = item.Price;
+                                    break;
 
-                            <td className="px-2 py-3 border border-gray-200 min-w-[90px] align-middle">
-                              <div className="grid grid-cols-2 gap-3 items-center h-full">
-                                <Button
-                                  sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px", }}
-                                  onClick={() => router.push(`/followups/customer/add/${item._id}`)}
-                                >
-                                  <MdAdd />
-                                </Button>
+                                  case "actions":
+                                    cellValue = (
+                                      <div className="grid grid-cols-2 gap-3 items-center h-full">
+                                        <Button
+                                          sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          /*  onClick={() => router.push(`/followups/customer/add/${item._id}`)} */
+                                          onClick={() => {
+                                            setSelectedCustomerFollowupId(item._id);
+                                            setIsFollowupOpen(true);
+                                          }}
+                                        >
+                                          <MdAdd />
+                                        </Button>
+                                        <Button
+                                          sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          onClick={() => router.push(`/customer/edit/${item._id}`)}
+                                        >
+                                          <MdEdit />
+                                        </Button>
+                                        <Button
+                                          sx={{ backgroundColor: "#FDECEA", color: "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          onClick={() => {
+                                            setIsDeleteDialogOpen(true);
+                                            setDialogType("delete");
+                                            setDialogData({
+                                              id: item._id,
+                                              customerName: item.Name,
+                                              ContactNumber: item.ContactNumber,
+                                            });
+                                          }}
+                                        >
+                                          <MdDelete />
+                                        </Button>
+                                        <Button
+                                          sx={{ backgroundColor: "#FFF0F5", color: item.isFavourite ? "#E91E63" : "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          onClick={() =>
+                                            handleFavouriteToggle(item._id, item.Name, item.ContactNumber, item.isFavourite ?? false)
+                                          }
+                                        >
+                                          {item.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
+                                        </Button>
+                                        <Button
+                                          className=" bg-gray-500"
+                                          sx={{ backgroundColor: item.isChecked ? "#E8F5E9" : "#FFF0F5", color: item.isChecked ? "var(--color-primary)" : "#E91E63", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          onClick={() =>
+                                            handleChecked({ id: item._id, isChecked: item.isChecked })
+                                          }
+                                        >
+                                          {item.isChecked ? <IoCheckmarkDoneOutline size={20} /> : <IoCheckmark size={20} />}
+                                        </Button>
+                                        <Button
+                                          sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
+                                          onClick={() => {
+                                            setIsFollowupDialogOpen(true);
+                                            handleFollowups(item._id, item.Name);
+                                          }}
+                                        >
+                                          <UserPlus />
+                                        </Button>
+                                      </div>
+                                    );
+                                    break;
+                                  default:
+                                    cellValue = null;
+                                }
+                              }
 
-                                <Button
-                                  sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px", }}
-                                  onClick={() => router.push(`/customer/edit/${item._id}`)}
-                                >
-                                  <MdEdit />
-                                </Button>
-
-                                <Button
-                                  sx={{ backgroundColor: "#FDECEA", color: "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px", }}
-                                  onClick={() => {
-                                    setIsDeleteDialogOpen(true);
-                                    setDialogType("delete");
-                                    setDialogData({
-                                      id: item._id,
-                                      customerName: item.Name,
-                                      ContactNumber: item.ContactNumber,
-                                    });
-                                  }}
-                                >
-                                  <MdDelete />
-                                </Button>
-
-                                <Button
-                                  sx={{
-                                    backgroundColor: "#FFF0F5",
-                                    color: item.isFavourite ? "#E91E63" : "#C62828",
-                                    minWidth: "32px",
-                                    height: "32px",
-                                    borderRadius: "8px",
-
-                                  }}
-                                  onClick={() =>
-                                    handleFavouriteToggle(item._id, item.Name, item.ContactNumber, item.isFavourite ?? false)
-                                  }
-                                >
-                                  {item.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
-                                </Button>
-                                <Button
-                                  className=" bg-gray-500"
-                                  sx={{
-                                    backgroundColor: item.isChecked ? "#E8F5E9" : "#FFF0F5",
-                                    color: item.isChecked ? "var(--color-primary)" : "#E91E63",
-                                    minWidth: "32px",
-                                    height: "32px",
-                                    borderRadius: "8px",
-
-                                  }}
-                                  onClick={() =>
-                                    handleChecked({ id: item?._id, isChecked: item?.isChecked })
-                                  }
-                                >
-                                  {item.isChecked ? <IoCheckmarkDoneOutline size={20} /> : <IoCheckmark size={20} />}
-                                </Button>
-                              </div>
-                            </td>
+                              return (
+                                <td key={col.key} className={`px-2 py-3 border border-gray-200 break-all whitespace-normal 
+                                    ${col.key !== "sno" ? "min-w-[100px]" : ""}
+            ${col.key === "description" && item.Description ? "min-w-[160px]" : ""} 
+            ${col.key === "sno" ? "sticky left-7.5  bg-white max-w-[60px]" : ""}
+             ${col.key === "type" ? "max-w-[80px]" : ""}
+             ${col.key === "subtype" ? "max-w-[90px]" : ""} 
+             ${col.key === "contact" ? "max-w-[140px]" : ""} 
+             ${col.key === "reference" ? "max-w-[70px]" : ""}
+              ${col.key === "date" ? "min-w-[100px]" : ""} 
+             ${col.key === "actions" ? "min-w-[90px] align-middle" : ""}
+             `}>
+                                  {cellValue}
+                                </td>
+                              );
+                            })}
                           </tr>
-                        })
+                        ))
                       ) : (
                         <tr>
-                          <td colSpan={10} className="text-center py-4 text-gray-500">
+                          <td colSpan={10} className="text-center py-4 w-full text-gray-500">
                             No data available.
                           </td>
                         </tr>

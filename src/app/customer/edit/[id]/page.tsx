@@ -143,6 +143,7 @@ export default function CustomerEdit() {
             id: data.SubLocation?._id || "",
             name: data.SubLocation?.Name || ""
           },
+          Address: data.Adderess || "",
           CustomerDate: data?.CustomerDate,
           CustomerImage: [],
           SitePlan: {} as File,
