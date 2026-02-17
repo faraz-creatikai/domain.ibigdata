@@ -146,7 +146,7 @@ export default function CustomerTable<T extends Record<string, any>>({
                                 {allLabelLeads?.map((item, j) => (
                                     <div
                                         key={j}
-                                        className={`flex ${viewLeadData?.[item.key]?.length > 30 && "flex-col gap-2"} justify-between p-3 bg-gray-50 rounded-lg`}
+                                        className={`flex ${viewLeadData?.[item.key]?.length > 30 && "flex-col gap-2"} my-1 justify-between p-3 bg-gray-50 rounded-lg`}
                                     >
                                         <span className="font-semibold text-gray-700 text-sm">
                                             {item.label}
