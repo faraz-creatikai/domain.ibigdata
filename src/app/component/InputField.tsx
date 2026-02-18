@@ -8,7 +8,7 @@ export const InputField: React.FC<{
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
 }> = ({className, label, name, value, onChange, error }) => (
-  <label className={`relative block w-full ${className} max-sm:dark:text-gray-400 `}>
+  <label className={`relative block w-full ${className} max-sm:dark:text-gray-300 `}>
     <input
       type="text"
       name={name}
