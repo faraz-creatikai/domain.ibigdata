@@ -109,7 +109,7 @@ const TableDialog = ({
                                         <div className="p-5 space-y-4">
                                             {/* Name & Campaign */}
                                             <div className="space-y-2 pr-12">
-                                                <h3 className="text-lg font-bold text-[var(--color-primary)] text-[var(--color-primary-light)] line-clamp-1">
+                                                <h3 className="text-lg font-bold text-[var(--color-primary)] max-sm:dark:text-[var(--color-primary-light)] line-clamp-1">
                                                     {item.Name || 'N/A'}
                                                 </h3>
                                                 {item.Campaign && (
