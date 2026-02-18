@@ -18,7 +18,7 @@ const TextareaField: React.FC<{
         ${
           error
             ? "border-red-500 focus:border-red-500"
-            : "border-gray-400 dark:border-gray-700 focus:border-blue-500"
+            : "border-gray-400 max-sm:dark:border-gray-700 focus:border-blue-500"
         }
       `}
     ></textarea>

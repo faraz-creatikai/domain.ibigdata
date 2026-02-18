@@ -90,7 +90,7 @@ const FollowupAddDialog = ({ isOpen, onClose, customerId }: Props) => {
 
   return (
     <PopupMenu isOpen={isOpen} onClose={onClose}>
-      <div className="relative w-[600px] max-w-full bg-white dark:bg-[var(--color-childbgdark)] rounded-3xl shadow-2xl p-8 max-md:p-4 animate-fadeIn">
+      <div className="relative w-[600px] max-w-full bg-white max-sm:dark:bg-[var(--color-childbgdark)] rounded-3xl shadow-2xl p-8 max-md:p-4 animate-fadeIn">
 
         {/* Header */}
         <div className="flex justify-between items-center max-md:px-4 border-b pb-4 mb-6">
