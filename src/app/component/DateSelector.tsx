@@ -7,6 +7,7 @@ import FormControl from "@mui/material/FormControl";
 
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { useThemeCustom } from "@/context/ThemeContext";
 dayjs.extend(customParseFormat);
 
 /* ---------- helper ---------- */
@@ -33,6 +34,7 @@ export default function DateSelector({ label, value, onChange }: DateSelectorPro
   const [selectedDate, setSelectedDate] = React.useState<any>(
     value ? parseDate(value) : null
   );
+  const { dark, toggleTheme } = useThemeCustom();
 
   React.useEffect(() => {
     setSelectedDate(value ? parseDate(value) : null);
@@ -67,14 +69,33 @@ export default function DateSelector({ label, value, onChange }: DateSelectorPro
           slotProps={{
             textField: {
               fullWidth: true,
+              InputLabelProps: {
+                sx: {
+                  color: `${dark && "#9CA3AF"}`, // normal color
+                  "&.Mui-focused": {
+                    color: `${dark && "#9CA3AF"}`, // focused color
+                  },
+                },
+              },
               sx: {
+
+                // NORMAL BORDER
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: dark ? "#374151" : undefined, // gray-700 example
+  },
                 "& .MuiInputBase-root": {
                   borderRadius: "8px",
                   maxHeight: "3rem",
+                  color: `${dark && "#D1D5DB"}`
                 },
                 // move the placeholder label up a little
                 "& .MuiInputLabel-root": {
                   transform: "translate(1rem,0.8rem)",
+                },
+
+                //calendar icon 
+                "& .MuiSvgIcon-root": {
+                  color: dark ? "#9CA3AF" : undefined,
                 },
                 // keep the shrunk label where it is
                 "& .MuiInputLabel-shrink": {

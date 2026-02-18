@@ -109,6 +109,20 @@
   /* table phone screen color */
    --table: #7888e4;
 
+  /* dark/light */
+
+  --color-bgdark:#04171c;
+  --color-bglight:white;
+
+  --color-childbglight:#EDE9FE;
+  --color-childbgdark:#052b36;
+
+  --color-txtdark:black;
+  --color-txtlight:white;
+
+  --color-bghoverlight:gray;
+  --color-bghoverdark:red;
+
 
   /* app font */
   --app-font:;

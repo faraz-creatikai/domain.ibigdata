@@ -63,44 +63,44 @@ const FollowupAddDialog = ({ isOpen, onClose, customerId }: Props) => {
     return newErrors;
   };
 
-const handleSubmit = async () => {
-  const validationErrors = validate();
-  if (Object.keys(validationErrors).length) {
-    setErrors(validationErrors);
-    return;
-  }
+  const handleSubmit = async () => {
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors);
+      return;
+    }
 
-  const payload = {
-    ...formData,
-    customer: customerId as string,
+    const payload = {
+      ...formData,
+      customer: customerId as string,
+    };
+
+    const data = await addCustomerFollowup(customerId as string, payload);
+
+    if (data) {
+      toast.success("Followup Added Successfully!");
+      onClose();
+    } else {
+      toast.error("Failed to add Followup");
+    }
   };
-
-  const data = await addCustomerFollowup(customerId as string, payload);
-
-  if (data) {
-    toast.success("Followup Added Successfully!");
-    onClose();
-  } else {
-    toast.error("Failed to add Followup");
-  }
-};
 
 
   if (!isOpen) return null;
 
   return (
     <PopupMenu isOpen={isOpen} onClose={onClose}>
-      <div className="relative w-[600px] max-w-full bg-white rounded-3xl shadow-2xl p-8 max-md:p-4 animate-fadeIn">
+      <div className="relative w-[600px] max-w-full bg-white dark:bg-[var(--color-childbgdark)] rounded-3xl shadow-2xl p-8 max-md:p-4 animate-fadeIn">
 
         {/* Header */}
         <div className="flex justify-between items-center max-md:px-4 border-b pb-4 mb-6">
-          <h2 className="text-2xl font-bold text-[var(--color-secondary-darker)]">
+          <h2 className="text-2xl font-bold text-[var(--color-secondary-darker)] max-sm:dark:text-[var(--color-primary)]">
             Add <span className="text-[var(--color-primary)]">Followup</span>
           </h2>
 
           <button
             onClick={onClose}
-            className="text-3xl -mt-2 -mr-6 p-2 rounded-md hover:bg-[var(--color-primary)] hover:text-white transition-all"
+            className="text-3xl -mt-2 -mr-6 p-2 rounded-md hover:bg-[var(--color-primary)] hover:text-white max-sm:dark:text-white transition-all"
           >
             <IoMdClose />
           </button>
@@ -108,12 +108,14 @@ const handleSubmit = async () => {
 
         {/* Form */}
         <div className="flex flex-col gap-5">
+          <div className=" max-sm:dark:text-white">
+            <DateSelector
+              label="Start Date"
+              value={formData.StartDate}
+              onChange={(val) => handleChange("StartDate", val)}
+            />
+          </div>
 
-          <DateSelector
-            label="Start Date"
-            value={formData.StartDate}
-            onChange={(val) => handleChange("StartDate", val)}
-          />
 
           <SingleSelect
             options={Array.isArray(fieldOptions?.StatusType) ? fieldOptions.StatusType : []}
@@ -129,7 +131,7 @@ const handleSubmit = async () => {
           />
 
           <TextareaField
-           name="Description"
+            name="Description"
             label="Description"
             value={formData.Description}
             onChange={(e) => handleChange("Description", e.target.value)}

@@ -236,7 +236,7 @@ export default function ContactEdit() {
                     />
                 </div>
 
-                <div className="bg-white/90 backdrop-blur-lg p-10 max-sm:px-5 rounded-3xl shadow-2xl h-auto">
+                <div className="bg-white/90 max-sm:dark:bg-[var(--color-childbgdark)] backdrop-blur-lg p-10 max-sm:px-5 rounded-3xl shadow-2xl h-auto">
                     <form onSubmit={(e) => e.preventDefault()}>
                         <div className="mb-8 text-left border-b pb-4 border-gray-200">
                             <h1 className="text-2xl  max-sm:text-2xl font-bold text-[var(--color-secondary-darker)] leading-tight tracking-tight">

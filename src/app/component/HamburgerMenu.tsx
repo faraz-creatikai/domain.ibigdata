@@ -153,7 +153,7 @@ useEffect(()=>{
           {open && <button
             ref={buttonRef}
             onClick={() => setOpen(!open)}
-            className=" mx-4 fixed rounded-sm top-4 p-2 bg-white z-[2001] left-64 text-xl  outline-0  flex items-center justify-center"
+            className=" mx-4 fixed rounded-sm top-4 p-2 bg-white dark:bg-[var(--color-childbgdark)] dark:text-white z-[2001] left-64 text-xl  outline-0  flex items-center justify-center"
           ><TfiClose  size={20}/></button>}
         </AnimatePresence>
 
@@ -193,7 +193,7 @@ useEffect(()=>{
                 opacity: 0,
                 transition: { duration: 0.2 },
               }}
-              className="fixed top-0 left-0 h-screen  w-[260px] bg-white backdrop-blur-md shadow-xl"
+              className="fixed top-0 left-0 h-screen  w-[260px] bg-white dark:bg-[var(--color-childbgdark)] dark:text-white  backdrop-blur-md shadow-xl"
               style={{ zIndex: 2000 }}
             >
               <div className="flex flex-col max-h-screen overflow-y-auto p-5 gap-5">
@@ -208,7 +208,7 @@ useEffect(()=>{
                   <Link
                     key={index}
                     href={item.url}
-                    className="flex items-center gap-3 text-gray-950 text-lg py-2 px-2 rounded hover:bg-white/20 transition"
+                    className="flex items-center gap-3 text-gray-950 dark:text-white text-lg py-2 px-2 rounded hover:bg-white/20 transition"
                     onClick={() => setOpen(false)}
                   >
                     <span>{item.icon}</span>

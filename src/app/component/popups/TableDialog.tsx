@@ -31,22 +31,22 @@ const TableDialog = ({
 
     return (
         <PopupMenu onClose={onClose} isOpen={isOpen}>
-            <div className="flex flex-col relative border border-gray-300/20 w-full h-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-gray-50/80 text-[var(--color-secondary-darker)]">
+            <div className="flex flex-col relative border border-gray-300/20 dark:border-none w-full h-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-gray-50/80 dark:from-[var(--color-primary)] dark:via-[var(--color-secondary-darker)] dark:to-[var(--color-bgdark)] text-[var(--color-secondary-darker)]">
 
                 {/* Header Section - Enhanced with gradient background */}
-                <div className="sticky top-0 z-20 bg-gradient-to-r from-white via-gray-50/90 to-white backdrop-blur-md border-b border-gray-200/60 shadow-sm">
+                <div className="sticky top-0 z-20 bg-gradient-to-r from-white via-gray-50/90 to-white dark:from-[var(--color-childbgdark)] dark:via-[var(--color-childbgdark)] dark:to-[var(--color-childbgdark)] text-[var(--color-secondary-darker)] backdrop-blur-md border-b border-gray-200/60 shadow-sm">
                     <div className="p-4 sm:p-6 lg:p-7">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-baseline gap-2 flex-wrap">
-                                    <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-secondary-darker)] tracking-wide leading-tight">
+                                    <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-secondary-darker)] dark:text-white tracking-wide leading-tight">
                                         {title}{' '}
                                         <span className="text-[var(--color-primary)] font-light text-lg sm:text-xl">
                                             {subTitle}
                                         </span>
                                     </h1>
                                 </div>
-                                <p className="mt-2 text-sm sm:text-base text-gray-600 font-medium flex flex-wrap items-center gap-2">
+                                <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300 font-medium flex flex-wrap items-center gap-2">
 
                                     <span className="inline-flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse"></span>
@@ -69,7 +69,7 @@ const TableDialog = ({
                             {/* Close Button - Enhanced with better hover states */}
                             <button
                                 onClick={onClose}
-                                className="flex-shrink-0 group p-2.5 sm:p-3 text-gray-400 hover:text-white bg-white hover:bg-gradient-to-br hover:from-[var(--color-primary)] hover:to-[var(--color-primary)]/80 rounded-xl border border-gray-200 hover:border-[var(--color-primary)] transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-[var(--color-primary)]/20 active:scale-95"
+                                className="flex-shrink-0 group p-2.5 sm:p-3 text-gray-400 hover:text-white bg-white dark:bg-[var(--color-primary-darker)] dark:border-none dark:text-white hover:bg-gradient-to-br hover:from-[var(--color-primary)] hover:to-[var(--color-primary)]/80 rounded-xl border border-gray-200 hover:border-[var(--color-primary)] transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-[var(--color-primary)]/20 active:scale-95"
                                 aria-label="Close dialog"
                             >
                                 <IoMdClose className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:rotate-90" />
@@ -94,7 +94,7 @@ const TableDialog = ({
                                 {data.map((item, index) => (
                                     <div
                                         key={item._id}
-                                        className="group relative bg-white border border-gray-200/70 hover:border-[var(--color-primary)]/40 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 overflow-hidden"
+                                        className="group relative bg-white dark:bg-[var(--color-secondary-darker)] border border-gray-200/70 hover:border-[var(--color-primary)]/40 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 overflow-hidden"
                                     >
                                         {/* Card Header with Index */}
                                         <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[var(--color-primary)]/10 to-transparent rounded-bl-[3rem]">
@@ -123,54 +123,54 @@ const TableDialog = ({
                                             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
                                                 {/* Customer Type */}
                                                 <div className="space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</p>
-                                                    <p className="text-sm font-medium text-gray-800 line-clamp-2">{item.Type || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Type</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-2">{item.Type || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Subtype */}
                                                 <div className="space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Subtype</p>
-                                                    <p className="text-sm font-medium text-gray-800 line-clamp-2">{item.SubType || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Subtype</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-2">{item.SubType || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Location */}
                                                 <div className="space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Location</p>
-                                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.Location || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Location</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{item.Location || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Sub Location */}
                                                 <div className="space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sub Location</p>
-                                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.SubLocation || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Sub Location</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{item.SubLocation || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Contact Number */}
                                                 {item.ContactNumber && (
                                                     <div className="space-y-1">
-                                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</p>
+                                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Contact</p>
                                                         <p className="text-sm font-bold text-[var(--color-primary)]">{item.ContactNumber}</p>
                                                     </div>
                                                 )}
 
                                                 {/* Assign To */}
                                                 <div className="space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned</p>
-                                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.AssignTo || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Assigned</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{item.AssignTo || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Date */}
                                                 <div className="space-y-1 col-span-2">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</p>
-                                                    <p className="text-sm font-medium text-gray-800">{item.Date || 'N/A'}</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Date</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white">{item.Date || 'N/A'}</p>
                                                 </div>
                                             </div>
 
                                             {/* Description */}
                                             {item.Description && (
                                                 <div className="pt-3 border-t border-gray-100 space-y-1">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</p>
-                                                    <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Description</p>
+                                                    <p className="text-sm text-gray-700 dark:text-white leading-relaxed line-clamp-3">
                                                         {item.Description}
                                                     </p>
                                                 </div>
@@ -179,7 +179,7 @@ const TableDialog = ({
                                             {/* Actions */}
                                             {renderActions && (
                                                 <div className="pt-3 border-t border-gray-100">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Actions</p>
+                                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide mb-4">Actions</p>
                                                     <div className="flex gap-2 flex-wrap">
                                                         {renderActions(item)}
                                                     </div>
@@ -192,7 +192,7 @@ const TableDialog = ({
 
                             {/* Desktop Table View (hidden on mobile) */}
                             <div className="hidden lg:block h-full overflow-hidden p-5 lg:p-6">
-                                <div className="h-full overflow-y-auto custom-scrollbar border border-gray-200/60 rounded-2xl shadow-lg bg-white">
+                                <div className="h-full overflow-y-auto custom-scrollbar border border-gray-200/60 rounded-2xl shadow-lg bg-white dark:bg-[var(--color-childbgdark)]">
                                     <table className="table-auto w-full border-separate border-spacing-0 text-sm">
                                         <thead className="sticky top-0 z-10">
                                             <tr className="bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary)]/95 to-[var(--color-primary)] text-white">
@@ -244,23 +244,23 @@ const TableDialog = ({
                                                     className="group hover:bg-gradient-to-r hover:from-[var(--color-primary)]/5 hover:via-transparent hover:to-transparent transition-all duration-200 border-b border-gray-100/50"
                                                 >
                                                     <td className="px-3 py-4 text-center font-semibold text-gray-600 group-hover:text-[var(--color-primary)] transition-colors">
-                                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 group-hover:bg-[var(--color-primary)]/10 group-hover:ring-2 group-hover:ring-[var(--color-primary)]/20 transition-all">
+                                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-[var(--color-primary-darker)] dark:text-white group-hover:bg-[var(--color-primary)]/10 group-hover:ring-2 group-hover:ring-[var(--color-primary)]/20 transition-all">
                                                             {index + 1}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-4 font-medium text-gray-800">{item.Campaign || 'N/A'}</td>
+                                                    <td className="px-4 py-4 font-medium text-gray-800 dark:text-gray-400">{item.Campaign || 'N/A'}</td>
                                                     <td className="px-4 py-4 max-w-[140px]">
-                                                        <span className="text-sm text-gray-700 line-clamp-2">{item.Type || 'N/A'}</span>
+                                                        <span className="text-sm text-gray-700 dark:text-gray-400 line-clamp-2">{item.Type || 'N/A'}</span>
                                                     </td>
                                                     <td className="px-4 py-4 max-w-[130px]">
-                                                        <span className="text-sm text-gray-700 line-clamp-2">{item.SubType || 'N/A'}</span>
+                                                        <span className="text-sm text-gray-700 dark:text-gray-400 line-clamp-2">{item.SubType || 'N/A'}</span>
                                                     </td>
-                                                    <td className="px-4 py-4 font-semibold text-gray-800">{item.Name || 'N/A'}</td>
+                                                    <td className="px-4 py-4 font-semibold text-gray-800 dark:text-gray-400">{item.Name || 'N/A'}</td>
                                                     <td className="px-4 py-4 max-w-[180px]">
-                                                        <span className="text-sm text-gray-600 line-clamp-2">{item.Description || 'N/A'}</span>
+                                                        <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{item.Description || 'N/A'}</span>
                                                     </td>
-                                                    <td className="px-4 py-4 text-gray-700">{item.Location || 'N/A'}</td>
-                                                    <td className="px-4 py-4 text-gray-700">{item.SubLocation || 'N/A'}</td>
+                                                    <td className="px-4 py-4 text-gray-700 dark:text-gray-400">{item.Location || 'N/A'}</td>
+                                                    <td className="px-4 py-4 text-gray-700 dark:text-gray-400">{item.SubLocation || 'N/A'}</td>
                                                     <td className="px-4 py-4 text-center">
                                                         {item.ContactNumber ? (
                                                             <span className="inline-block px-3 py-1.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg font-semibold text-sm border border-[var(--color-primary)]/20">
@@ -270,10 +270,10 @@ const TableDialog = ({
                                                             <span className="text-gray-400">N/A</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-4 text-gray-700">{item.AssignTo || 'N/A'}</td>
-                                                    <td className="px-4 py-4 text-gray-600 whitespace-nowrap">{item.Date || 'N/A'}</td>
+                                                    <td className="px-4 py-4 text-gray-700 dark:text-gray-400">{item.AssignTo || 'N/A'}</td>
+                                                    <td className="px-4 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">{item.Date || 'N/A'}</td>
                                                     {renderActions && (
-                                                        <td className="px-4 py-4 sticky right-0 bg-white group-hover:bg-gradient-to-r group-hover:from-[var(--color-primary)]/5 group-hover:via-white group-hover:to-white shadow-[-4px_0_6px_rgba(0,0,0,0.03)]">
+                                                        <td className="px-4 py-4 sticky right-0 bg-white dark:bg-[var(--color-childbgdark)] group-hover:bg-gradient-to-r group-hover:from-[var(--color-primary)]/5 group-hover:via-white group-hover:to-white dark:group-hover:via-[var(--color-secondary-darker)] dark:group-hover:to-[var(--color-secondary-darker)] shadow-[-1px_0_6px_rgba(0,0,0,0.03)]">
                                                             <div className="flex gap-2 justify-center">
                                                                 {renderActions(item)}
                                                             </div>

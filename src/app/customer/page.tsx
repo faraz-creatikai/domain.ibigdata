@@ -425,12 +425,17 @@ export default function Customer() {
       City: item.City,
       Location: item.Location,
       Adderess: item.Adderess,
+      Area: item.Area,
       SubLocation: item.SubLocation,
+      CustomerId: item.CustomerId,
+      CustomerYear: item.CustomerYear,
+      Facillities: item.Facillities,
       ContactNumber: item.ContactNumber?.slice(0, 10),
       ReferenceId: item.ReferenceId,
       AssignTo: item.AssignTo?.name,
       isFavourite: item.isFavourite,
       isChecked: item.isChecked,
+      Other: item.Other,
       Date:
         item.CustomerDate === "N/A"
           ? "N/A"
@@ -1410,7 +1415,7 @@ export default function Customer() {
       {
         isfollowupDialogOpen && Array.isArray(followupDialogData) && followupDialogData.length > 0 && (
           <PopupMenu onClose={() => { setIsFollowupDialogOpen(false); setFollowupDialogData([]); }}>
-            <div className="flex flex-col border border-white/20 overflow-hidden bg-white/80 backdrop-blur-xl text-[var(--color-secondary-darker)] rounded-2xl shadow-2xl p-0 max-w-[800px] gap-0 m-2 w-full max-h-[85vh] overflow-hidden ring-1 ring-black/5">
+            <div className="flex flex-col border border-white/20 overflow-hidden bg-white/80 max-sm:dark:bg-[var(--color-childbgdark)] backdrop-blur-xl text-[var(--color-secondary-darker)] rounded-2xl shadow-2xl p-0 max-w-[800px] gap-0 m-2 w-full max-h-[85vh] overflow-hidden ring-1 ring-black/5">
               {/* Header - Glassmorphism effect */}
               <div className="flex flex-col justify-between  p-6 py-5 bg-gradient-to-r from-[var(--color-secondary-darker)] to-[var(--color-secondary)] text-white sticky top-0 z-10 backdrop-blur-md bg-opacity-95">
                 <div className=" flex justify-between items-center">
@@ -1450,7 +1455,7 @@ export default function Customer() {
                   followupDialogData.map((item, index) => (
                     <div
                       key={item._id ?? +index}
-                      className="group relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border border-gray-100 rounded-xl p-3 shadow-sm hover:shadow-xl hover:border-[var(--color-primary)]/20 transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden"
+                      className="group relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white max-sm:dark:bg-[var(--color-childbgdark)] max-sm:dark:border-gray-700 border border-gray-100 rounded-xl p-3 shadow-sm hover:shadow-xl hover:border-[var(--color-primary)]/20 transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden"
                     >
                       {/* Decorative gradient line */}
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-secondary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1480,7 +1485,7 @@ export default function Customer() {
                             </span>
                             <div>
                               <p className="text-xs mb-1 text-gray-400 font-medium uppercase tracking-wider">Follow-up Date</p>
-                              <p className="font-semibold text-[var(--color-secondary-darker)]">{item.StartDate}</p>
+                              <p className="font-semibold text-[var(--color-secondary-darker)] max-sm:dark:text-[var(--color-secondary)]">{item.StartDate}</p>
                             </div>
                           </div>
 
@@ -1492,19 +1497,19 @@ export default function Customer() {
                             </span>
                             <div>
                               <p className="text-xs mb-1 text-gray-400 font-medium uppercase tracking-wider">Next Follow-up</p>
-                              <p className="font-semibold text-[var(--color-secondary-darker)]">{item.FollowupNextDate}</p>
+                              <p className="font-semibold text-[var(--color-secondary-darker)] max-sm:dark:text-[var(--color-secondary)]">{item.FollowupNextDate}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="mt-2 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                        <div className="mt-2 p-3 bg-gray-50/50 max-sm:dark:bg-[var(--color-primary-darker)]/50 rounded-lg border border-gray-100 max-sm:dark:border-none">
                           <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Description</p>
-                          <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{item.Description}</p>
+                          <p className="text-sm text-gray-700 max-sm:dark:text-gray-300 leading-relaxed line-clamp-3">{item.Description}</p>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex flex-row gap-3 justify-end items-center w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 mt-2 md:mt-0">
+                      <div className="flex flex-row gap-3 justify-end items-center w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 max-sm:dark:border-gray-600 mt-2 md:mt-0">
                         <Button
                           sx={{
                             backgroundColor: "#E8F5E9",
@@ -2285,7 +2290,8 @@ export default function Customer() {
                                     break;
                                   case "CustomerYear":
                                     cellValue = item.CustomerYear;
-                                    break; case "Other":
+                                    break; 
+                                  case "Other":
                                     cellValue = item.Other;
                                     break;
                                   case "name":
