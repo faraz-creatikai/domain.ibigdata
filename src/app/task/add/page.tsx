@@ -92,7 +92,7 @@ const AddPageInner: React.FC<{ router: any }> = ({ router }) => {
       <div className="flex justify-center">
         <div className="bg-white max-sm:dark:bg-[var(--color-childbgdark)] max-sm:dark:text-white backdrop-blur-lg p-10 max-sm:px-5 max-sm:py-7 rounded-3xl shadow-2xl h-auto w-full">
           <form onSubmit={(e) => e.preventDefault()}>
-            <div className="mb-8 text-left border-b pb-4 border-gray-200">
+            <div className="mb-8 text-left border-b pb-4 border-gray-200 max-sm:dark:border-gray-700">
               <h1 className="text-3xl font-extrabold text-[var(--color-secondary-darker)]  max-sm:dark:text-[var(--color-primary)] leading-tight tracking-tight">
                 {id ? "Edit" : "Add"} <span className="text-[var(--color-primary)]">Task</span>
               </h1>
