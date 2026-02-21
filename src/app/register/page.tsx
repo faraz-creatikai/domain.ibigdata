@@ -145,13 +145,13 @@ const Register = () => {
         <Toaster position="top-right" />
 
         {/* LEFT PANEL (DESKTOP ONLY) */}
-        <div className="relative w-full flex flex-col items-center justify-between bg-[var(--color-primary-lighter)] p-10 max-lg:hidden">
+        <div className="relative w-full flex flex-col items-center justify-between bg-[var(--color-primary-lighter)] dark:bg-[var(--color-secondary-darker)] p-10 max-lg:hidden">
           <div className="self-start">
             <div className=" relative">
               <h2 className="font-bold text-2xl">
-                i<span className="text-[var(--color-primary)]">big</span>data
+                i<span className="text-[var(--color-secondary)]">big</span>data
               </h2>
-              <p className=" absolute top-0  right-12 text-[8px] rounded-xl text-[var(--color-primary)] font-normal border border-[var(--color-primary)] px-[5px] py-[1px]">Domain</p>
+              <p className=" absolute top-0  right-12 text-[8px] rounded-xl text-[var(--color-secondary)] font-normal border border-[var(--color-secondary)] px-[5px] py-[1px]">Domain</p>
             </div>
             <p className="text-gray-400 text-sm font-light mt-1">
               Domain Insights, Made Easy
@@ -163,7 +163,7 @@ const Register = () => {
           </div>
 
           <div className="self-start text-gray-500">
-            <h2 className="text-[var(--color-primary)] text-2xl font-bold mb-1">
+            <h2 className="text-[var(--color-secondary)] text-2xl font-bold mb-1">
               Create Account
             </h2>
             <p>Register to manage everything efficiently.</p>
@@ -172,7 +172,7 @@ const Register = () => {
 
         {/* RIGHT PANEL */}
         <div className="flex flex-col justify-between items-center w-full max-lg:bg-[url('/loginbg.png')] max-lg:bg-cover max-lg:bg-center max-lg:bg-no-repeat min-h-full bg-white 
-    max-lg:text-white max-lg:bg-linear-to-b 
+    max-lg:text-white dark:bg-linear-to-b dark:from-[var(--color-primary)] dark:to-[var(--color-secondary)] max-lg:text-white max-lg:bg-linear-to-b max-lg:from-[var(--color-primary)]  max-lg:bg-linear-to-b 
     max-lg:from-[var(--color-primary)] max-lg:to-fuchsia-900 px-1">
 
           {/* MOBILE HEADER */}
@@ -194,7 +194,7 @@ const Register = () => {
           <div className="w-full max-w-[500px] flex flex-col justify-center items-center 
       p-4 lg:p-8 py-8 rounded-lg bg-white">
 
-            <h3 className="text-2xl font-semibold text-[var(--color-primary)] text-center mb-6">
+            <h3 className="text-2xl font-semibold text-[var(--color-primary)] text-center ">
               Register Account
             </h3>
 
@@ -215,8 +215,8 @@ const Register = () => {
                 <label
                   htmlFor="name"
                   className={`absolute left-10 transition-all duration-200 ${name
-                      ? "-top-1.5 text-[var(--color-primary)] text-sm"
-                      : "top-3 text-gray-800 text-base"
+                    ? "-top-1.5 text-[var(--color-primary)] text-sm"
+                    : "top-3 text-gray-800 text-base"
                     } peer-focus:-top-1.5 peer-focus:text-[var(--color-primary)] peer-focus:text-sm`}
                 >
                   Full Name
@@ -238,8 +238,8 @@ const Register = () => {
                 <label
                   htmlFor="email"
                   className={`absolute left-10 transition-all duration-200 ${email
-                      ? "-top-1.5 text-[var(--color-primary)] text-sm"
-                      : "top-3 text-gray-800 text-base"
+                    ? "-top-1.5 text-[var(--color-primary)] text-sm"
+                    : "top-3 text-gray-800 text-base"
                     } peer-focus:-top-1.5 peer-focus:text-[var(--color-primary)] peer-focus:text-sm`}
                 >
                   Email Address
@@ -261,8 +261,8 @@ const Register = () => {
                 <label
                   htmlFor="password"
                   className={`absolute left-10 transition-all duration-200 ${password
-                      ? "-top-1.5 text-[var(--color-primary)] text-sm"
-                      : "top-3 text-gray-800 text-base"
+                    ? "-top-1.5 text-[var(--color-primary)] text-sm"
+                    : "top-3 text-gray-800 text-base"
                     } peer-focus:-top-1.5 peer-focus:text-[var(--color-primary)] peer-focus:text-sm`}
                 >
                   Password
@@ -308,8 +308,8 @@ const Register = () => {
                 <label
                   htmlFor="phone"
                   className={`absolute left-10 transition-all duration-200 ${phone
-                      ? "-top-1.5 text-[var(--color-primary)] text-sm"
-                      : "top-3 text-gray-800 text-base"
+                    ? "-top-1.5 text-[var(--color-primary)] text-sm"
+                    : "top-3 text-gray-800 text-base"
                     } peer-focus:-top-1.5 peer-focus:text-[var(--color-primary)] peer-focus:text-sm`}
                 >
                   Phone Number
@@ -341,7 +341,7 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="text-[var(--color-primary-light)] text-sm my-10">
+          <div className="text-[var(--color-primary-light)] text-sm my-5">
             &copy;{currentYear} ibigdata, all rights reserved
           </div>
         </div>
