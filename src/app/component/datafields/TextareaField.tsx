@@ -14,7 +14,7 @@ const TextareaField: React.FC<{
       value={value ?? ""}
       onChange={onChange}
       placeholder=" "
-      className={`peer w-full max-sm:text-gray-300 border rounded-sm bg-transparent py-3 px-4 outline-none min-h-[100px]
+      className={`peer w-full  border rounded-sm bg-transparent py-3 px-4 outline-none min-h-[100px]
         ${
           error
             ? "border-red-500 focus:border-red-500"
