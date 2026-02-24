@@ -61,6 +61,7 @@ import { customerFollowupAllDataInterface } from "@/store/customerFollowups.inte
 import { FollowupDeleteDialogDataInterface } from "@/store/contactFollowups.interface";
 import { BsPersonFill } from "react-icons/bs";
 import GoogleMapDialog from "../component/popups/GoogleMapDialogue";
+import CustomerEditDialog from "../component/popups/CustomerEditDialog";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -122,7 +123,8 @@ export default function Customer() {
 
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-
+const [isEditOpen, setIsEditOpen] = useState(false);
+const [customerToEdit, setCustomerToEdit] = useState<any>(null);
 
 
   const scrollRef = useHorizontalScroll();
@@ -386,6 +388,11 @@ export default function Customer() {
   };
 
 
+const handleEditClick = (id: string | number) => {
+  setCustomerToEdit(id);
+  setIsEditOpen(true);
+};
+
   const handleFollowups = async (id: string, Name: string) => {
     const data = await getFollowupByCustomerId(id as string);
     if (data) {
@@ -514,7 +521,15 @@ export default function Customer() {
   };
 
 
+const handleCustomerUpdated = (updatedCustomer: any) => {
+  const mappedCustomer = mapCustomer(updatedCustomer);
 
+  setCustomerData((prev: any[]) =>
+    prev.map((cust) =>
+      cust._id === mappedCustomer._id ? mappedCustomer : cust
+    )
+  );
+};
 
 
   const handleDelete = async (data: DeleteDialogDataInterface | null) => {
@@ -533,47 +548,47 @@ export default function Customer() {
     }
   };
 
-const handleFavourite = async (data: DeleteDialogDataInterface | null) => {
-  if (!data) return;
+  const handleFavourite = async (data: DeleteDialogDataInterface | null) => {
+    if (!data) return;
 
-  const current = customerData.find(c => c._id === data.id);
-  if (!current) return;
+    const current = customerData.find(c => c._id === data.id);
+    if (!current) return;
 
-  const newFav = !current.isFavourite;
+    const newFav = !current.isFavourite;
 
-  const formData = new FormData();
-  formData.append("isFavourite", newFav.toString());
+    const formData = new FormData();
+    formData.append("isFavourite", newFav.toString());
 
 
 
-  const res = await updateCustomer(data.id, formData);
+    const res = await updateCustomer(data.id, formData);
 
-  if (res) {
+    if (res) {
       // 🔥 Optimistic update (instant UI update)
-  setCustomerData(prev =>
-    prev.map(c =>
-      c._id === data.id
-        ? { ...c, isFavourite: newFav }
-        : c
-    )
-  );
-    toast.success("Favourite updated successfully");
-  } else {
-    toast.error("Failed to update favourite");
+      setCustomerData(prev =>
+        prev.map(c =>
+          c._id === data.id
+            ? { ...c, isFavourite: newFav }
+            : c
+        )
+      );
+      toast.success("Favourite updated successfully");
+    } else {
+      toast.error("Failed to update favourite");
 
-    // 🔁 rollback if API fails
-    setCustomerData(prev =>
-      prev.map(c =>
-        c._id === data.id
-          ? { ...c, isFavourite: current.isFavourite }
-          : c
-      )
-    );
-  }
+      // 🔁 rollback if API fails
+      setCustomerData(prev =>
+        prev.map(c =>
+          c._id === data.id
+            ? { ...c, isFavourite: current.isFavourite }
+            : c
+        )
+      );
+    }
 
-  setIsFavouriteDialogOpen(false);
-  setDialogData(null);
-};
+    setIsFavouriteDialogOpen(false);
+    setDialogData(null);
+  };
 
 
   const handleChecked = async (data: CheckDialogDataInterface | null) => {
@@ -657,100 +672,100 @@ const handleFavourite = async (data: DeleteDialogDataInterface | null) => {
 
   }
 
-const handleSelectChange = async (
-  field: keyof typeof filters,
-  selected: string | string[] | boolean,
-  filtersOverride?: typeof filters
-) => {
-  setCustomerTableLoader(true);
+  const handleSelectChange = async (
+    field: keyof typeof filters,
+    selected: string | string[] | boolean,
+    filtersOverride?: typeof filters
+  ) => {
+    setCustomerTableLoader(true);
 
-  const updatedFilters = filtersOverride || {
-    ...filters,
-    [field]: Array.isArray(selected)
-      ? selected
-      : typeof selected === "boolean"
-      ? field === "isFavourite"
-        ? selected // keep boolean
-        : selected
-        ? ["true"]
-        : []
-      : selected
-      ? [selected]
-      : [],
+    const updatedFilters = filtersOverride || {
+      ...filters,
+      [field]: Array.isArray(selected)
+        ? selected
+        : typeof selected === "boolean"
+          ? field === "isFavourite"
+            ? selected // keep boolean
+            : selected
+              ? ["true"]
+              : []
+          : selected
+            ? [selected]
+            : [],
+    };
+
+    setFilters(updatedFilters);
+    lastAppliedFiltersRef.current = updatedFilters;
+    setIsFilteredTrigger(true);
+
+    try {
+      const hasBothDates =
+        updatedFilters.StartDate?.length > 0 &&
+        updatedFilters.EndDate?.length > 0;
+
+      const queryParams = new URLSearchParams();
+
+      Object.entries(updatedFilters).forEach(([key, value]) => {
+        if (key === "Limit") return;
+
+        if (
+          (key === "StartDate" || key === "EndDate") &&
+          !hasBothDates
+        ) {
+          return;
+        }
+
+        if (key === "isFavourite" && value === true) {
+          queryParams.append(key, "true");
+          return;
+        }
+
+        if (Array.isArray(value) && value.length > 0) {
+          value.forEach((v) => queryParams.append(key, v));
+        } else if (typeof value === "string" && value) {
+          queryParams.append(key, value);
+        }
+      });
+
+      if (!hasBothDates) {
+        queryParams.append("Limit", FETCH_CHUNK.toString());
+        queryParams.append("Skip", "0");
+      }
+
+      // 👇 ensures loader renders before API call
+      await new Promise(requestAnimationFrame);
+
+      const data = await getFilteredCustomer(queryParams.toString());
+
+      if (data) {
+        const mapped = data.map(mapCustomer);
+        setCustomerData(mapped);
+        setFetchedCount(mapped.length);
+        setHasMoreCustomers(mapped.length === FETCH_CHUNK);
+        setCurrentTablePage(1);
+      }
+
+      const totalQueryParams = new URLSearchParams(queryParams);
+      totalQueryParams.delete("Limit");
+      totalQueryParams.delete("Skip");
+
+      const totalfilteredData = await getFilteredCustomer(
+        totalQueryParams.toString()
+      );
+
+      if (totalfilteredData) {
+        setTotalCustomers(totalfilteredData.length);
+        if (field === "Keyword") {
+          await changeStep(STEPS.FOUND(totalfilteredData.length));
+        }
+      }
+
+      return data;
+    } finally {
+      // 👇 ALWAYS runs even if API fails
+      setCustomerTableLoader(false);
+    }
   };
-
-  setFilters(updatedFilters);
-  lastAppliedFiltersRef.current = updatedFilters;
-  setIsFilteredTrigger(true);
-
-  try {
-    const hasBothDates =
-      updatedFilters.StartDate?.length > 0 &&
-      updatedFilters.EndDate?.length > 0;
-
-    const queryParams = new URLSearchParams();
-
-    Object.entries(updatedFilters).forEach(([key, value]) => {
-      if (key === "Limit") return;
-
-      if (
-        (key === "StartDate" || key === "EndDate") &&
-        !hasBothDates
-      ) {
-        return;
-      }
-
-      if (key === "isFavourite" && value === true) {
-        queryParams.append(key, "true");
-        return;
-      }
-
-      if (Array.isArray(value) && value.length > 0) {
-        value.forEach((v) => queryParams.append(key, v));
-      } else if (typeof value === "string" && value) {
-        queryParams.append(key, value);
-      }
-    });
-
-    if (!hasBothDates) {
-      queryParams.append("Limit", FETCH_CHUNK.toString());
-      queryParams.append("Skip", "0");
-    }
-
-    // 👇 ensures loader renders before API call
-    await new Promise(requestAnimationFrame);
-
-    const data = await getFilteredCustomer(queryParams.toString());
-
-    if (data) {
-      const mapped = data.map(mapCustomer);
-      setCustomerData(mapped);
-      setFetchedCount(mapped.length);
-      setHasMoreCustomers(mapped.length === FETCH_CHUNK);
-      setCurrentTablePage(1);
-    }
-
-    const totalQueryParams = new URLSearchParams(queryParams);
-    totalQueryParams.delete("Limit");
-    totalQueryParams.delete("Skip");
-
-    const totalfilteredData = await getFilteredCustomer(
-      totalQueryParams.toString()
-    );
-
-    if (totalfilteredData) {
-      setTotalCustomers(totalfilteredData.length);
-      if (field === "Keyword") {
-        await changeStep(STEPS.FOUND(totalfilteredData.length));
-      }
-    }
-
-    return data;
-  } finally {
-    // 👇 ALWAYS runs even if API fails
-    setCustomerTableLoader(false);
-  }
-};
 
   const clearFilter = async () => {
     setFilters({
@@ -1362,7 +1377,17 @@ const handleSelectChange = async (
         onDelete={handleFavourite}
       />
 
-    
+
+
+  <CustomerEditDialog
+  isOpen={isEditOpen}
+    customerId={customerToEdit}
+    onClose={() => {
+      setIsEditOpen(false);
+      setCustomerToEdit(null);
+    }}
+    onCustomerUpdated={handleCustomerUpdated}
+  />
 
 
       {/* customer by contact number */}
@@ -1739,7 +1764,7 @@ const handleSelectChange = async (
 
 
             <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
-             
+
             <div className=" w-full flex justify-end"></div>
             <div className=" w-full flex justify-end">
               <button type="reset" onClick={clearFilter} className="text-red-500 cursor-pointer hover:underline text-sm px-5 py-2 rounded-md">
@@ -1754,7 +1779,7 @@ const handleSelectChange = async (
           labelLeads={phonetableheader}
           allLabelLeads={phoneViewAllHaders}
           onAdd={(id) => addFollowupFromDialogue(id)}
-          onEdit={(id) => router.push(`/customer/edit/${id}`)}
+          onEdit={(id) => /* router.push(`/customer/edit/${id}`) */ handleEditClick(id)}
           onWhatsappClick={(lead) => {
             setSelectedCustomers([lead._id]);
             setIsWhatsappAllOpen(true);
@@ -1786,11 +1811,11 @@ const handleSelectChange = async (
             handleTableDialogData(contactNumber);
           }}
         />
-        
+
 
       </div>
 
-        <GoogleMapDialog
+      <GoogleMapDialog
         isOpen={isMapOpen}
         address={selectedAddress}
         onClose={() => {
@@ -2022,7 +2047,7 @@ const handleSelectChange = async (
                     />
                     <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label={getLabel("ReferenceId", "Reference Id")} onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
                     <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label={getLabel("Price", "Price")} onChange={(v) => handleSelectChange("Price", v)} isSearchable />
- {/* <SingleSelect options={Array.isArray(fieldOptions?.isFavourite) ? fieldOptions.isFavourite : []} value={filters.isFavourite[0]} label="favroutie" onChange={(v) => handleSelectChange("isFavourite", v)}  /> */}
+                    {/* <SingleSelect options={Array.isArray(fieldOptions?.isFavourite) ? fieldOptions.isFavourite : []} value={filters.isFavourite[0]} label="favroutie" onChange={(v) => handleSelectChange("isFavourite", v)}  /> */}
 
                     <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
 
@@ -2032,34 +2057,35 @@ const handleSelectChange = async (
                     }} />
                     <DateSelector label="From" value={filters.StartDate[0]} onChange={(v) => handleSelectChange("StartDate", v)} />
                     <DateSelector label="To" value={filters.EndDate[0]} onChange={(v) => handleSelectChange("EndDate", v)} />
-<div>
- <input
-  id="favouriteFilter"
-  type="checkbox"
-  className="hidden"
-  checked={filters.isFavourite}
-  onChange={(e) =>
-    handleSelectChange("isFavourite", e.target.checked)
-  }
-/>
+                    <div>
 
-<label
-  htmlFor="favouriteFilter"
-  className={`
-    inline-flex items-center justify-center
-    h-10 px-4 rounded-md border
-    text-sm font-medium cursor-pointer
-    transition-colors duration-200 gap-2
-    ${
-      filters.isFavourite
-        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-        : "bg-white text-gray-700 border-gray-300"
-    }
+                      <input
+                        id="favouriteFilter"
+                        type="checkbox"
+                        className="hidden"
+                        checked={filters.isFavourite}
+                        onChange={(e) =>
+                          handleSelectChange("isFavourite", e.target.checked)
+                        }
+                      />
+
+                      <label
+                        htmlFor="favouriteFilter"
+                        className={`
+        inline-flex items-center justify-center
+        h-10 px-4 rounded-md border
+        text-sm font-medium cursor-pointer
+        transition-colors duration-200 gap-2
+                 ${filters.isFavourite
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "bg-white text-gray-700 border-gray-300"
+                          }
   `}
->
-  {filters.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
-  Favourite
-</label></div>
+                      >
+                        {filters.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
+                        Favourite
+                      </label>
+                    </div>
                   </div>
 
 
@@ -2365,7 +2391,7 @@ const handleSelectChange = async (
                                     break;
                                   case "CustomerYear":
                                     cellValue = item.CustomerYear;
-                                    break; 
+                                    break;
                                   case "Other":
                                     cellValue = item.Other;
                                     break;
@@ -2501,7 +2527,7 @@ const handleSelectChange = async (
                                         </Button>
                                         <Button
                                           sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
-                                          onClick={() => router.push(`/customer/edit/${item._id}`)}
+                                          onClick={() => /* router.push(`/customer/edit/${item._id}`) */ handleEditClick(item._id)}
                                         >
                                           <MdEdit />
                                         </Button>

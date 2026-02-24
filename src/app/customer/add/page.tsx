@@ -30,6 +30,7 @@ import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
 import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 import { useCustomerFieldLabel } from "@/context/customer/CustomerFieldLabelContext";
+import dayjs from "dayjs";
 
 interface ErrorInterface {
   [key: string]: string;
@@ -55,7 +56,7 @@ export default function CustomerAdd() {
     Facilities: "",
     ReferenceId: "",
     CustomerId: "",
-    CustomerDate: "",
+    CustomerDate: dayjs().format("YYYY-MM-DD"),
     CustomerYear: "",
     Other: "",
     Price: "",
@@ -488,6 +489,7 @@ console.log(" file object customerfields : ",customFields)
                   }
                 }}
                 error={errors.Location}
+                isSearchable
               />
               <ObjectSelect
                 options={Array.isArray(fieldOptions?.SubLocation) ? fieldOptions.SubLocation : []}
@@ -505,6 +507,7 @@ console.log(" file object customerfields : ",customFields)
                   }
                 }}
                 error={errors.SubLocation}
+                isSearchable
               />
               <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Address", "Address")} name="Address" value={customerData.Address} onChange={handleInputChange} />
