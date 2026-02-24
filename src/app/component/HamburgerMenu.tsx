@@ -7,7 +7,12 @@ import { BrickWallFire, Podcast, School, Cable, ShieldUser, NotebookTabs, Home }
 import Link from "next/link";
 import { MdClose } from "react-icons/md";
 import { TfiClose } from "react-icons/tfi";
-const data = [
+import { useAuth } from "@/context/AuthContext";
+
+export default function MobileHamburger() {
+
+   const { admin, isLoading, login } = useAuth();
+   const data = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -15,7 +20,7 @@ const data = [
   },
   {
     title: "Campaign",
-    url: "/masters/campaign",
+    url: `${admin?.role!=="administrator"?"/masters/campaign/allcampaigns":"/masters/campaign"}`,
     icon: <BrickWallFire size={22} />,
   },
   {
@@ -60,7 +65,7 @@ const data = [
   }
 
 ]
-export default function MobileHamburger() {
+
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
