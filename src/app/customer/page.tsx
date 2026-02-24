@@ -123,10 +123,13 @@ export default function Customer() {
 
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-const [isEditOpen, setIsEditOpen] = useState(false);
-const [customerToEdit, setCustomerToEdit] = useState<any>(null);
-
-
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState<any>(null);
+  const [assignMode, setAssignMode] = useState<"selected" | "campaign">("selected");
+  const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
+  const [campaignList, setCampaignList] = useState<
+    { _id: string; Name: string; Status: string }[]
+  >([]);
   const scrollRef = useHorizontalScroll();
   const searchParams = useSearchParams();
   const { admin } = useAuth();
@@ -296,6 +299,13 @@ const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   }, [DEFAULT_COLUMNS]);
 
 
+  const fetchCampaigns = async () => {
+    const res = await getCampaign();
+    if (res) {
+      setCampaignList(res);
+    }
+  };
+
 
   useEffect(() => {
     localStorage.setItem("table-columns", JSON.stringify(columns));
@@ -388,10 +398,10 @@ const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   };
 
 
-const handleEditClick = (id: string | number) => {
-  setCustomerToEdit(id);
-  setIsEditOpen(true);
-};
+  const handleEditClick = (id: string | number) => {
+    setCustomerToEdit(id);
+    setIsEditOpen(true);
+  };
 
   const handleFollowups = async (id: string, Name: string) => {
     const data = await getFollowupByCustomerId(id as string);
@@ -521,15 +531,15 @@ const handleEditClick = (id: string | number) => {
   };
 
 
-const handleCustomerUpdated = (updatedCustomer: any) => {
-  const mappedCustomer = mapCustomer(updatedCustomer);
+  const handleCustomerUpdated = (updatedCustomer: any) => {
+    const mappedCustomer = mapCustomer(updatedCustomer);
 
-  setCustomerData((prev: any[]) =>
-    prev.map((cust) =>
-      cust._id === mappedCustomer._id ? mappedCustomer : cust
-    )
-  );
-};
+    setCustomerData((prev: any[]) =>
+      prev.map((cust) =>
+        cust._id === mappedCustomer._id ? mappedCustomer : cust
+      )
+    );
+  };
 
 
   const handleDelete = async (data: DeleteDialogDataInterface | null) => {
@@ -1116,22 +1126,34 @@ const handleCustomerUpdated = (updatedCustomer: any) => {
       return;
     }
 
+    if (assignMode === "selected" && selectedCustomers.length === 0) {
+      toast.error("Please select customers");
+      return;
+    }
+
+    if (assignMode === "campaign" && !selectedCampaign) {
+      toast.error("Please select a campaign");
+      return;
+    }
+
     const payload: customerAssignInterface = {
-      customerIds: selectedCustomers,
       assignToId: selectedUser,
+      ...(assignMode === "selected"
+        ? { customerIds: selectedCustomers }
+        : { campaign: selectedCampaign }),
     };
 
-    // console.log(payload)
-
     const response = await assignCustomer(payload);
+
     if (response) {
-      toast.success(" customers assigned succesfully")
+      toast.success("Customers assigned successfully");
       await getCustomers();
       setIsAssignOpen(false);
-      return response
+      return response;
     }
-    toast.error("failed to assign customers")
-    setIsAssignOpen(false)
+
+    toast.error("Failed to assign customers");
+    setIsAssignOpen(false);
   };
 
   const handleMailAll = async () => {
@@ -1379,15 +1401,15 @@ const handleCustomerUpdated = (updatedCustomer: any) => {
 
 
 
-  <CustomerEditDialog
-  isOpen={isEditOpen}
-    customerId={customerToEdit}
-    onClose={() => {
-      setIsEditOpen(false);
-      setCustomerToEdit(null);
-    }}
-    onCustomerUpdated={handleCustomerUpdated}
-  />
+      <CustomerEditDialog
+        isOpen={isEditOpen}
+        customerId={customerToEdit}
+        onClose={() => {
+          setIsEditOpen(false);
+          setCustomerToEdit(null);
+        }}
+        onCustomerUpdated={handleCustomerUpdated}
+      />
 
 
       {/* customer by contact number */}
@@ -1832,7 +1854,7 @@ const handleCustomerUpdated = (updatedCustomer: any) => {
 
 
         {/* Assign User Popup */}
-        {isAssignOpen && selectedCustomers.length > 0 && (
+        {isAssignOpen && (
           <ListPopup
             title="Assign Customers"
             list={users}
@@ -1841,7 +1863,61 @@ const handleCustomerUpdated = (updatedCustomer: any) => {
             onSubmit={handleAssignto}
             submitLabel="Assign"
             onClose={() => setIsAssignOpen(false)}
-          />
+          >
+            <div className="px-6 flex flex-col gap-3">
+
+              {/* Mode Switch */}
+              <div className="flex gap-4 text-sm">
+                <label className="flex gap-2 items-center">
+                  <input
+                    type="radio"
+                    checked={assignMode === "selected"}
+                    onChange={() => setAssignMode("selected")}
+                  />
+                  Selected Customers
+                </label>
+
+                <label className="flex gap-2 items-center" onClick={() => fetchCampaigns()}>
+                  <input
+                    type="radio"
+                    checked={assignMode === "campaign"}
+                    onChange={() => setAssignMode("campaign")}
+                  />
+                  Entire Campaign
+                </label>
+              </div>
+
+              {/* Campaign Dropdown */}
+              {assignMode === "campaign" && (
+                /*   <select
+                    className="border rounded px-3 py-2"
+                    value={selectedCampaign || ""}
+                    onChange={(e) => setSelectedCampaign(e.target.value)}
+                  >
+                    <option value="">Select Campaign</option>
+                
+                    {campaignList
+                      .filter((c) => c.Status === "Active") // optional: only active
+                      .map((c) => (
+                        <option key={c._id} value={c.Name}>
+                          {c.Name}
+                        </option>
+                      ))}
+                  </select> */
+                <SingleSelect
+                  options={
+                    campaignList
+                      .filter((c) => c.Status === "Active")
+                      .map((c) => (c.Name))
+                  }
+                  value={selectedCampaign}
+                  label="Select Campaign"
+                  onChange={(v) => setSelectedCampaign(v)}
+                  isSearchable
+                />
+              )}
+            </div>
+          </ListPopup>
         )}
 
 
