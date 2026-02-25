@@ -1145,14 +1145,14 @@ export default function Customer() {
 
     const response = await assignCustomer(payload);
 
-    if (response) {
+    if (response.success) {
       toast.success("Customers assigned successfully");
       await getCustomers();
       setIsAssignOpen(false);
       return response;
     }
-
-    toast.error("Failed to assign customers");
+//console.log(" faraz is here wow brother ",response)
+   toast.error(response.message);
     setIsAssignOpen(false);
   };
 
