@@ -7,10 +7,10 @@ import Button from '@mui/material/Button';
 import SingleSelect from "@/app/component/SingleSelect";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ChevronsLeft, ChevronsRight, PlusSquare, UserPlus } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, Bot, ChevronsLeft, ChevronsRight, PlusSquare, Sparkles, UserPlus, Zap } from "lucide-react";
 import ProtectedRoute from "../component/ProtectedRoutes";
 import toast, { Toaster } from "react-hot-toast";
-import { getCustomer, deleteCustomer, getFilteredCustomer, updateCustomer, assignCustomer, deleteAllCustomer } from "@/store/customer";
+import { getCustomer, deleteCustomer, getFilteredCustomer, updateCustomer, assignCustomer, deleteAllCustomer, getDuplicateContacts, getTodayCustomer, startCallByAIAgent, getCallLogs, getCallReport, closeCustomerDeal, getCustomerCount } from "@/store/customer";
 import { CheckDialogDataInterface, CustomerAdvInterface, customerAssignInterface, customerGetDataInterface, DeleteDialogDataInterface } from "@/store/customer.interface";
 import DeleteDialog from "../component/popups/DeleteDialog";
 import { getCampaign } from "@/store/masters/campaign/campaign";
@@ -38,7 +38,7 @@ import CustomerTable from "../phonescreens/DashboardScreens/tables/CustomerTable
 import DynamicAdvance from "../phonescreens/DashboardScreens/DynamicAdvance";
 import { handleFieldOptionsObject } from "../utils/handleFieldOptionsObject";
 import ObjectSelect from "../component/ObjectSelect";
-import { FaCaretDown, FaCaretUp, FaCheck, FaCheckDouble, FaEye, FaPhone, FaWhatsapp } from "react-icons/fa";
+import { FaCaretDown, FaCaretUp, FaCheck, FaCheckDouble, FaEye, FaMicrophone, FaPhone, FaWhatsapp } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { exportToExcel } from "../utils/exportToExcel";
 import { getsubLocationByCityLoc } from "@/store/masters/sublocation/sublocation";
@@ -59,19 +59,67 @@ import FollowupAddDialog from "../component/popups/FollowupAddDialog";
 import { deleteFollowup, getFollowupByCustomerId } from "@/store/customerFollowups";
 import { customerFollowupAllDataInterface } from "@/store/customerFollowups.interface";
 import { FollowupDeleteDialogDataInterface } from "@/store/contactFollowups.interface";
-import { BsPersonFill } from "react-icons/bs";
+import { BsArrowLeftShort, BsPersonFill } from "react-icons/bs";
 import GoogleMapDialog from "../component/popups/GoogleMapDialogue";
 import CustomerEditDialog from "../component/popups/CustomerEditDialog";
+import { callAllDataInterface } from "@/store/masters/call/call.interface";
+import { callCustomer } from "@/store/masters/call/call";
+import { useAIAgents } from "@/hooks/useAIAgents";
+import AgentSelector from "../component/AgentSelector";
+import RightSidebar from "../component/popups/RightSidebar";
+import FollowupAgentWorkspace from "../component/aiagents/FollowupAgentWorkspace";
+import { getLeadType } from "@/store/masters/leadtype/leadtype";
+import PriceRange from "../component/PriceRange";
+import BottomSheet from "../component/popups/BottomSheet";
+import BottomPopup from "../component/popups/BottomPopup";
+import AIChatMessages from "../component/aiagents/AIChatMessages";
+import AIAgentDropdown from "../component/aiagents/AIAgentDropdown";
+import TodayCustomerDialog from "../component/popups/TodayCustomerDialog";
+import { HiCalendar } from "react-icons/hi2";
+import { create } from "domain";
+import QualificationAgentWorkspace from "../component/aiagents/QualificationAgentWorkspace";
+import CallingAgentWorkspace from "../component/aiagents/CallingAgentWorkspace";
+import RecommendAgentWorkspace from "../component/aiagents/RecommendAgentWorkspace";
+import AIAgentSidebar from "../component/aiagents/AIAgentSidebar";
+import DataMiningAgentWorkspace from "../component/aiagents/AnalyticsAgentWorkspace";
+import AnalyticsAgentWorkspace from "../component/aiagents/AnalyticsAgentWorkspace";
+import SocialMiningAgentWorkspace from "../component/aiagents/MiningAgentWorkspace";
+import SocialAgentWorkspace from "../component/aiagents/SocialAgentWorkspace";
+import { FaHandshakeSimple } from "react-icons/fa6";
+import ScriptAgentWorkspace from "../component/aiagents/ScriptAgentWorkspace";
+import ShortlistManagerPopup from "../component/popups/Shortlistmanagerpopup";
+import WebhookAgentWorkspace from "../component/aiagents/WebhookAgentWorkspace";
+import SendPropertiesWhatsAppPopup from "../component/popups/SendPropertiesWhatsappPopup";
+import WhatsAppActionMenu from "../component/popups/WhatsappActionMenu";
+import SendDirectWhatsappDialog from "../component/popups/SendDirectWhatsappDialog";
 
 
 interface DeleteAllDialogDataInterface { }
 
-
+interface AIAgent {
+  id: string
+  name: string
+  description: string
+  type: string
+  status: string
+  campaign?: string
+  targetSegment?: string
+  capability?: string
+  tasksCompleted?: number
+  accuracy?: number
+  createdAt?: string
+  assignedUsers?: string[]
+}
 
 export default function Customer() {
   const router = useRouter();
   const hasInitialFetched = useRef(false);
   const { getLabel, labels } = useCustomerFieldLabel();
+  const { fetchMyAgents } = useAIAgents();
+  const [agents, setAgents] = useState<AIAgent[]>([]);
+  const [isAgentsLoading, setIsAgentsLoading] = useState(true);
+  const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
+  const [isAIAgentsDialogOpen, setIsAIAgentDialogOpen] = useState(false);
   /* fetch */
   const FETCH_CHUNK = 100;
   const [keywordInput, setKeywordInput] = useState("");
@@ -79,14 +127,24 @@ export default function Customer() {
   const [hasMoreCustomers, setHasMoreCustomers] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [totalCustomers, setTotalCustomers] = useState(0);
-  const [totalCustomerPage, setTotalCustomerPage] = useState(1)
+
   const [isFilteredTrigger, setIsFilteredTrigger] = useState(false);
   const lastAppliedFiltersRef = useRef<typeof filters | null>(null);
+  const [isDupContactTableLoading, setIsDupContactTableLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [messages, setMessages] = useState<
+    { role: 'user' | 'ai'; text: string }[]
+  >([]);
 
+  const [qualificationAiMessages, setQualificationAiMessages] = useState<
+    { role: 'user' | 'ai'; text: string }[]
+  >([]);
+  const totalCustomersRef = useRef(0);
 
   /*NEW STATE FOR SELECTED CUSTOMERS */
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [selectedUser, setSelectUser] = useState<string>();
+  const [selectedUser, setSelectUser] = useState<string[]>([]);
   const [selectedWhatsapptemplate, setSelectedWhatsapptemplate] = useState<string>();
   const [selectedMailtemplate, setSelectedMailtemplate] = useState<string>();
   const [users, setUsers] = useState<usersGetDataInterface[]>([])
@@ -101,7 +159,9 @@ export default function Customer() {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isMailAllOpen, setIsMailAllOpen] = useState(false);
   const [isWhatsappAllOpen, setIsWhatsappAllOpen] = useState(false);
+  const [isSendPropertiesOpen, setIsSendPropertiesOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSendDirectMessageOpen, setIsSendDirectMessageOpen] = useState(false);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [isFavouriteDialogOpen, setIsFavouriteDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<DeleteDialogDataInterface | null>(null);
@@ -109,27 +169,74 @@ export default function Customer() {
   const [fieldOptions, setFieldOptions] = useState<Record<string, any[]>>({});
   const [isFavrouteCustomer, setIsFavrouteCustomer] = useState<boolean>(false);
   const [customerTableLoader, setCustomerTableLoader] = useState(true);
-  const [deleteAllDialogData, setDeleteAllDialogData] =
-    useState<DeleteAllDialogDataInterface | null>(null);
+  const [deleteAllDialogData, setDeleteAllDialogData] = useState<DeleteAllDialogDataInterface | null>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const [tableDialogcustomerData, setTableDialogCustomerData] = useState<customerGetDataInterface[]>([]);
 
   const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const [isDealCloseOpen, setIsDealCloseOpen] = useState(false);
+  const [dealCloseData, setDealCloseData] = useState<any>(null);
   const [selectedCustomerFollowupId, setSelectedCustomerFollowupId] = useState<string | null>(null);
   const [followupDialogData, setFollowupDialogData] = useState<customerFollowupAllDataInterface[] | null>([]);
   const [isfollowupDialogOpen, setIsFollowupDialogOpen] = useState(false);
   const [isFollowupDeleteDialogOpen, setIsFollowupDeleteDialogOpen] = useState(false);
   const [followupdeleteDialogData, setFollowupDeleteDialogData] = useState<FollowupDeleteDialogDataInterface | null>(null);
-
-  const [isMapOpen, setIsMapOpen] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [assignMode, setAssignMode] = useState<"selected" | "campaign">("selected");
-  const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
+  const [selectedCampaign, setSelectedCampaign] = useState<string[] | undefined>([]);
   const [campaignList, setCampaignList] = useState<
     { _id: string; Name: string; Status: string }[]
   >([]);
+
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [isTemperatureDialogOpen, setIsTemperatureDialogOpen] = useState(false);
+  const [temperatureDialogData, setTemperatureDialogData] = useState<any>(null);
+  const [isTodayDialogOpen, setIsTodayDialogOpen] = useState(false);
+  const initialParamFetch = useRef(false);
+  const [totalCustomerPage, setTotalCustomerPage] = useState(1);
+  const [isShortlistDialogOpen, setIsShortlistDialogOpen] = useState(false);
+  const [shortlistDialogData, setShortlistDialogData] = useState<any>(null);
+
+  const [shortlistOpen, setShortlistOpen] = useState(false);
+  const [assignAction, setAssignAction] = useState<"assign" | "remove">("assign");
+  const [isAssignLoading, setIsAssignLoading] = useState(false); // ✅ new state
+  const [isWhatsappSendLoading, setIsWhatsappSendLoading] = useState(false);
+  const [isMailSendLoading, setIsMailSendLoading] = useState(false);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+
+  // Add these loading states at the top of your component
+  const [isFetchingWhatsappTemplates, setIsFetchingWhatsappTemplates] = useState(false);
+  const [isFetchingMailTemplates, setIsFetchingMailTemplates] = useState(false);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+
+
+  // Derives from your existing users array — assumes users have a `role` field
+  const hasUserRoleSelected = Array.isArray(selectedUser) &&
+    selectedUser.some((id) => users.find((u: any) => u._id === id)?.role === "user");
+
+
+  const temperatureConfig: any = {
+    hot: {
+      bg: "#FDECEA",
+      color: "#D32F2F",
+      icon: "🔥"
+    },
+    warm: {
+      bg: "#FFF8E1",
+      color: "#F9A825",
+      icon: "🌤️"
+    },
+    cold: {
+      bg: "#E3F2FD",
+      color: "#1976D2",
+      icon: "❄️"
+    }
+  };
+
+
+
   const scrollRef = useHorizontalScroll();
   const searchParams = useSearchParams();
   const { admin } = useAuth();
@@ -146,7 +253,7 @@ export default function Customer() {
     "Price",
     "ReferenceId",
   ] as const;
-  const [toggleAiGenieSearchBy, setToggleAiGenieSearchBy] = useState(false);
+  const [toggleAiGenieSearchBy, setToggleAiGenieSearchBy] = useState(true);
 
   const [filters, setFilters] = useState({
     StatusAssign: [] as string[],
@@ -160,7 +267,11 @@ export default function Customer() {
     Keyword: "" as string,
     SearchIn: [] as string[],
     ReferenceId: [] as string[],
+    MinPrice: [] as string[],
+    MaxPrice: [] as string[],
     Price: [] as string[],
+    LeadType: [] as string[],
+    LeadTemperature: [] as string[],
     isFavourite: false as boolean,
     Limit: ["100"] as string[],
     StartDate: [] as string[],
@@ -192,6 +303,7 @@ export default function Customer() {
   //end here setting button 
 
   const [customerData, setCustomerData] = useState<customerGetDataInterface[]>([]);
+  const [todaycustomerData, setTodayCustomerData] = useState<customerGetDataInterface[]>([]);
   const [customerAdv, setCustomerAdv] = useState<CustomerAdvInterface[]>([]);
   const [exportingCustomerData, setExportingCustomerData] = useState<customerGetDataInterface[]>([]);
   const [duplicateContacts, setDuplicateContacts] = useState<Record<string, boolean>>({});
@@ -218,12 +330,13 @@ export default function Customer() {
       { key: "type", label: getLabel("CustomerType", "CustomerType"), isPinned: true, visible: true },
       { key: "subtype", label: getLabel("CustomerSubType", "Customer Subtype"), isPinned: true, visible: true },
       { key: "name", label: getLabel("customerName", "Customer Name"), isPinned: true, visible: true },
+      { key: "leadtype", label: getLabel("LeadType", "Lead Type"), isPinned: true, visible: true },
       { key: "City", label: getLabel("City", "City"), isPinned: true, visible: true },
       { key: "Area", label: getLabel("Area", "Area"), isPinned: true, visible: true },
       { key: "Email", label: getLabel("Email", "Email"), isPinned: true, visible: true },
       { key: "Facillities", label: getLabel("Facillities", "Facillities"), isPinned: true, visible: true },
       { key: "CustomerId", label: getLabel("CustomerId", "Customer Id"), isPinned: true, visible: true },
-      { key: "date", label: getLabel("CustomerDate", "Date"), isPinned: true, visible: true },
+      { key: "ClientId", label: getLabel("ClientId", "Client Id"), isPinned: true, visible: true },
       { key: "CustomerYear", label: getLabel("CustomerYear", "Customer Year"), isPinned: true, visible: true },
       { key: "Other", label: getLabel("Other", "Other"), isPinned: true, visible: true },
       { key: "description", label: getLabel("Description", "Description"), isPinned: true, visible: true },
@@ -237,6 +350,7 @@ export default function Customer() {
       { key: "video", label: getLabel("Video", "Video"), isPinned: true, visible: true },
       { key: "googlemap", label: getLabel("GoogleMap", "GoogleMap"), isPinned: true, visible: true },
       { key: "price", label: getLabel("Price", "Price"), isPinned: true, visible: true },
+      { key: "date", label: getLabel("CustomerDate", "Date"), isPinned: true, visible: true },
       /* { key: "actions", label: "Actions", isPinned: true, visible: true }, */
     ]
 
@@ -298,7 +412,6 @@ export default function Customer() {
     );
   }, [DEFAULT_COLUMNS]);
 
-
   const fetchCampaigns = async () => {
     const res = await getCampaign();
     if (res) {
@@ -306,48 +419,205 @@ export default function Customer() {
     }
   };
 
-
   useEffect(() => {
     localStorage.setItem("table-columns", JSON.stringify(columns));
   }, [columns]);
 
+  const fetchAiAgents = async () => {
+    setIsAgentsLoading(true);
+    const agents = await fetchMyAgents();
+    setAgents(agents);
+    setIsAgentsLoading(false)
+  }
 
 
+  // ── Derive which param and which options array are active ─────────────────────
+  // Computed outside the effect so it can be used as a precise dependency.
+  const status = searchParams.get("Campaign");
+  const reference = searchParams.get("ReferenceId");
+  const leadtemperature = searchParams.get("LeadTemperature");
+
+  const activeParam = status
+    ? "Campaign"
+    : reference
+      ? "ReferenceId"
+      : leadtemperature
+        ? "LeadTemperature"
+        : null;
+
+  const relevantOptions = activeParam ? fieldOptions?.[activeParam] : null;
+  // ── Pagination Effect (Restored) ──────────────────────────────────────────────
   useEffect(() => {
-    const status = searchParams.get("Campaign");
-    if (!fieldOptions?.Campaign?.length) return;
+    const total = Math.ceil(totalCustomers / Number(filters.Limit[0])) || 1;
+    setTotalCustomerPage(total);
+  }, [filters, totalCustomers]);
 
-    if (status) {
+  const getTotalCustomerPage = async () => {
+    const data = await getCustomerCount();
+    // console.log(" wow ", data.totalCount)
+    const total = Math.ceil(data.totalCount / Number(filters.Limit[0])) || 1
+    setTotalCustomerPage(total);
+    setTotalCustomers(data.totalCount);
+  }
 
-      const campaignObj = fieldOptions?.Campaign?.find(
-        (c) => c.Name === status
-      );
-      // Auto set filter
-      setFilters((prev) => ({
-        ...prev,
-        StatusAssign: [status],
-      }));
-      setDependent((prev) => ({
-        ...prev,
-        Campaign: { id: campaignObj?._id, name: campaignObj?.Name }
-      }))
 
-      const updatedFilters = {
-        ...filters,
-        Campaign: [status],
-      };
+  // Object-based fields (for ObjectSelect)
+  const objectFields = [
+    { key: "Campaign", fetchFn: getCampaign },
+    { key: "CustomerType", staticData: [] },
+    { key: "CustomerSubtype", staticData: [] },
+    { key: "City", fetchFn: getCity },
+    { key: "Location", staticData: [] }, // dependent
+    { key: "SubLocation", staticData: [] }, // dependent
+
+  ];
+
+  // Simple array fields (for normal Select)
+  const arrayFields = [
+    { key: "StatusAssign", staticData: ["Assigned", "Unassigned"] },
+    { key: "LeadTemperature", staticData: ["hot", "warm", "cold"] },
+    { key: "User", fetchFn: getAllAdmins },
+    { key: "ReferenceId", fetchFn: getReferences },
+    { key: "Price", fetchFn: getPrice },
+    { key: "LeadType", fetchFn: getLeadType },
+    { key: "MinPrice", staticData: ["1000", "10,000", "20,000", "40,000", "60,000", "100,000", "200,000", "1,000,000", "2,000,000", "10,000,000", "100,000,000"] },
+    { key: "MaxPrice", staticData: ["5000", "10,000", "20,000", "40,000", "60,000", "100,000", "200,000", "1,000,000", "2,000,000", "10,000,000", "100,000,000"] },
+  ];
+
+  // 1. Create a guard reference outside the useEffect
+  const hasMounted = useRef(false);
+
+  // ── Effect 1: Mount-only (Strict Network Priority Queuing) ──────────────────
+  useEffect(() => {
+    // 2. If it has already run, stop immediately
+    if (hasMounted.current) return;
+    hasMounted.current = true;
+
+    audioRef.current = new Audio(
+      "https://res.cloudinary.com/dsyzuwice/video/upload/v1774423860/voicepop_ypkmtz.mp3"
+    );
+
+    const loadData = async () => {
+      // ---------------------------------------------------------
+      // PHASE 1: ABSOLUTE PRIORITY (Main Table)
+      // ---------------------------------------------------------
+      let mainTablePromise = null;
+
+      if (!activeParam) {
+        mainTablePromise = getCustomers();
+      } else {
+        // The 50ms head-start so Effect 2 can queue the filtered API first
+        mainTablePromise = new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // ---------------------------------------------------------
+      // PHASE 2: SECONDARY VIPs (Agents & Today's Leads)
+      // ---------------------------------------------------------
+      const agentsPromise = fetchAiAgents();
+      const todayPromise = fetchTodayCustomer();
+
+      // 🛑 WAIT HERE: Do not spam the browser with dropdown requests 
+      // until the main table has successfully loaded its data.
+      if (mainTablePromise) await mainTablePromise;
+
+      // ---------------------------------------------------------
+      // PHASE 3: BACKGROUND DATA (Dropdowns & Filters)
+      // Now that the table is rendering, silently load the filters.
+      // We bundle ALL background/dropdown tasks here so they don't block the UI.
+      // ---------------------------------------------------------
+      const backgroundTasks = [
+        fetchFields(),
+
+      ];
+
+      if (!activeParam) {
+        backgroundTasks.push(getTotalCustomerPage());
+      }
+
+      // Fire all background tasks concurrently (they won't block the UI)
+      Promise.allSettled(backgroundTasks);
+
+      // Finish waiting for Agents and Today's leads
+      await Promise.all([agentsPromise, todayPromise]);
+    };
+
+    loadData();
+  }, []);
+
+
+  // ── Effect 2: Fires only when the ONE relevant options array changes ───────────
+  // Because `relevantOptions` points to only Campaign OR ReferenceId OR
+  // LeadTemperature — not all three — this effect runs exactly once when
+  // the needed options load. Other arrays loading won't trigger it.
+  // 1. Create the guards outside the useEffect
+
+  const uiParamMapped = useRef(false);
+
+  // ── Effect 2: Fires only when the ONE relevant options array changes ───────────
+  useEffect(() => {
+    if (!activeParam) return;
+
+    // ---------------------------------------------------------
+    // 1. INSTANT API CALL (Guarded to strictly run ONCE)
+    // ---------------------------------------------------------
+    if (!initialParamFetch.current) {
+      initialParamFetch.current = true; // Lock it immediately
+
+      if (status) {
+        handleSelectChange("Campaign", status, { ...filters, Campaign: [status] });
+      } else if (reference) {
+        handleSelectChange("ReferenceId", reference, { ...filters, ReferenceId: [reference] });
+      } else if (leadtemperature) {
+        handleSelectChange("LeadTemperature", leadtemperature, { ...filters, LeadTemperature: [leadtemperature] });
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 2. DELAYED UI UPDATE (Guarded to strictly map ONCE)
+    // ---------------------------------------------------------
+    // Wait for the data to exist, AND check our new guard
+    if (relevantOptions && relevantOptions.length > 0 && !uiParamMapped.current) {
+      uiParamMapped.current = true; // Lock it immediately
+
+      if (status) {
+        const campaignObj = fieldOptions?.Campaign?.find((c) => c.Name === status);
+        setFilters((prev) => ({ ...prev, StatusAssign: [status] }));
+        setDependent((prev) => ({
+          ...prev,
+          // Note: Added fallback to .id just in case your new optimized API drops the underscore
+          Campaign: { id: campaignObj?._id || campaignObj?.id, name: campaignObj?.Name },
+        }));
+
+      } else if (reference) {
+        const referenceObj = fieldOptions?.ReferenceId?.find((c) => c.Name === reference);
+        setFilters((prev) => ({ ...prev, ReferenceId: [reference] }));
+        setDependent((prev) => ({
+          ...prev,
+          ReferenceId: { id: referenceObj?._id || referenceObj?.id, name: referenceObj?.Name },
+        }));
+
+      } else if (leadtemperature) {
+        const leadtemperatureObj = fieldOptions?.LeadTemperature?.find((c) => c.Name === leadtemperature);
+        setFilters((prev) => ({ ...prev, LeadTemperature: [leadtemperature] }));
+        setDependent((prev) => ({
+          ...prev,
+          LeadTemperature: { id: leadtemperatureObj?._id || leadtemperatureObj?.id, name: leadtemperatureObj?.Name },
+        }));
+      }
 
       setCustomerTableLoader(false);
+    }
 
-      // Fetch filtered data
-      handleSelectChange("Campaign", status, updatedFilters);
-    }
-    else {
-      getCustomers();
-      fetchFields();
-    }
-    getTotalCustomerPage();
-  }, [searchParams, fieldOptions.Campaign]);
+  }, [searchParams, relevantOptions]); // Dependencies remain the same
+
+  /*   const fetchcalllogs = async () => {
+      const res = await getCallReport();
+  
+      const res2 = await getCallLogs();
+  
+      console.log("call data", res);
+      console.log("call logs", res2);
+    } */
 
 
   useEffect(() => {
@@ -355,18 +625,27 @@ export default function Customer() {
     setExportingCustomerData(datatoExport);
   }, [selectedCustomers]);
 
-  const getTotalCustomerPage = async () => {
-    const data = await getCustomer();
-    const total = Math.ceil(data.length / Number(filters.Limit[0])) || 1
-    setTotalCustomerPage(total);
-    setTotalCustomers(data.length);
+
+
+  const fetchTodayCustomer = async () => {
+    const data = await getTodayCustomer();
+
+    if (data) {
+      const mapped = data.map(mapCustomer);
+      setTodayCustomerData(mapped);
+    }
   }
 
+  const handleOpenTodayCustomers = async () => {
+    setIsTodayDialogOpen(true);
+    await fetchTodayCustomer();
+  };
 
-  useEffect(() => {
-    const total = Math.ceil(totalCustomers / Number(filters.Limit[0])) || 1
-    setTotalCustomerPage(total);
-  }, [filters, totalCustomers]);
+
+  /*   useEffect(() => {
+      const total = Math.ceil(totalCustomers / Number(filters.Limit[0])) || 1
+      setTotalCustomerPage(total);
+    }, [filters, totalCustomers]); */
 
 
   function getPlainTextFromHTML(htmlString: string) {
@@ -406,7 +685,7 @@ export default function Customer() {
   const handleFollowups = async (id: string, Name: string) => {
     const data = await getFollowupByCustomerId(id as string);
     if (data) {
-      console.log("Followups customer data", data)
+      // console.log("Followups customer data", data)
       setFollowupDialogData(data.map((item: any) => ({
         _id: item._id,
         customer: item.customer._id,
@@ -446,13 +725,15 @@ export default function Customer() {
       Area: item.Area,
       SubLocation: item.SubLocation,
       CustomerId: item.CustomerId,
+      ClientId: item.ClientId,
       CustomerYear: item.CustomerYear,
       Facillities: item.Facillities,
       ContactNumber: item.ContactNumber?.slice(0, 10),
       ReferenceId: item.ReferenceId,
-      AssignTo: item.AssignTo?.name,
+      AssignTo: item.AssignTo ?? [],
       isFavourite: item.isFavourite,
       isChecked: item.isChecked,
+      LeadTemperature: item.LeadTemperature || "cold",
       Other: item.Other,
       Date:
         item.CustomerDate === "N/A"
@@ -466,7 +747,10 @@ export default function Customer() {
       Video: item.Video || "",
       GoogleMap: item.GoogleMap || "",
       Price: item.Price || "",
+      LeadType: item.LeadType || "",
+      Shortlisted: item?._count?.shortlistedProperties || 0,
       CustomerFields: item.CustomerFields || {},
+      createdAt: formattedDate,
     };
   };
 
@@ -600,14 +884,27 @@ export default function Customer() {
     setDialogData(null);
   };
 
+  const handleCall = async (data: callAllDataInterface | null) => {
+    if (!data) return;
+    const res = await callCustomer(data);
+
+    if (res) {
+      //  console.log(" response is here ", res);
+      toast.success("call sent successfully");
+      return;
+    }
+
+    toast.error(" failed to call this customer ");
+  }
+
 
   const handleChecked = async (data: CheckDialogDataInterface | null) => {
     if (!data) return;
-    console.log("data is ", data)
+    // console.log("data is ", data)
     const formData = new FormData();
     const current = customerData.find(c => c._id === data.id);
     const newChecked = !current?.isChecked;
-    console.log(" yes ", current?.isChecked)
+    // console.log(" yes ", current?.isChecked)
     formData.append("isChecked", newChecked.toString());
 
     const res = await updateCustomer(data.id, formData);
@@ -778,6 +1075,7 @@ export default function Customer() {
   };
 
   const clearFilter = async () => {
+    // 1. Reset your filter states
     setFilters({
       StatusAssign: [],
       Campaign: [],
@@ -790,12 +1088,17 @@ export default function Customer() {
       Keyword: "",
       SearchIn: [],
       ReferenceId: [],
+      MinPrice: [],
+      MaxPrice: [],
       Price: [],
+      LeadType: [],
+      LeadTemperature: [],
       isFavourite: false,
       Limit: ["100"],
       StartDate: [],
       EndDate: [],
     });
+
     setDependent({
       Campaign: { id: "", name: "" },
       CustomerType: { id: "", name: "" },
@@ -803,13 +1106,17 @@ export default function Customer() {
       City: { id: "", name: "" },
       Location: { id: "", name: "" },
       SubLocation: { id: "", name: "" },
-    })
-    setCurrentStep("")
-    setAiLoading(false)
-    setIsFilteredTrigger(false);
-    await getCustomers();
+    });
 
-    getTotalCustomerPage();
+    setCurrentStep("");
+    setAiLoading(false);
+    setIsFilteredTrigger(false);
+
+    // 2. 🚀 Fire BOTH the data fetch and the count fetch at the same time
+    await Promise.all([
+      getCustomers(),
+      getTotalCustomerPage()
+    ]);
   };
 
   const refreshCustomersWithLastFilters = async () => {
@@ -880,6 +1187,7 @@ export default function Customer() {
   });
 
   const fetchUsers = async () => {
+    setIsFetchingUsers(true);
     const response = await getAllAdmins();
 
     if (response) {
@@ -891,14 +1199,19 @@ export default function Customer() {
         admins.map((item: any): usersGetDataInterface => ({
           _id: item?._id ?? "",
           name: item?.name ?? "",
+          role: item?.role ?? "user"
         }))
       );
 
+      setIsFetchingUsers(false);
+
       return;
     }
+    setIsFetchingUsers(false);
   };
 
   const fetchEmailTemplates = async () => {
+    setIsFetchingMailTemplates(true);
     const response = await getMail();
 
     if (response) {
@@ -914,11 +1227,15 @@ export default function Customer() {
         }))
       );
 
+      setIsFetchingMailTemplates(false);
+
       return;
     }
+    setIsFetchingMailTemplates(false);
   };
 
   const fetchWhatsappTemplates = async () => {
+    setIsFetchingWhatsappTemplates(true);
     const response = await getWhatsapp();
 
     if (response) {
@@ -926,16 +1243,36 @@ export default function Customer() {
 
       const whatsapptemplates = response?.filter((e: any) => e.status === "Active") ?? []; //ensure only active status are fetched
       //console.log(" mail data ", response)
-      setWhatsappTemplates(
-        whatsapptemplates.map((item: any): whatsappGetDataInterface => ({
-          _id: item?._id ?? "",
-          name: item?.name ?? "",
-          body: item?.body ?? ""
-        }))
-      );
+      const mapWhatsappTemplateToListItem = (tpl: any) => ({
+        _id: tpl._id,
+        name: tpl.name,
+        body: tpl.body,
+        image: tpl.whatsappImage?.[0] || undefined, // 👈 unwrap the array into a plain string
+        whatsappMediaType: tpl.whatsappMediaType,
+        whatsappFileName: tpl.whatsappFileName,
+        category: tpl.category || undefined,
+        whatsappLocation: tpl.whatsappLocation,
+        whatsappPoll: tpl.whatsappPoll,
+        variables: Array.isArray(tpl.variables) ? tpl.variables : [],
+        whatsappLinkPreview: tpl.whatsappLinkPreview,
+      });
+
+      setIsFetchingWhatsappTemplates(false);
+
+      // then wherever you fetch and set the list for this popup:
+      setWhatsappTemplates(response.map(mapWhatsappTemplateToListItem));
+      /*       setWhatsappTemplates(
+              whatsapptemplates.map((item: any): whatsappGetDataInterface => ({
+                _id: item?._id ?? "",
+                name: item?.name ?? "",
+                body: item?.body ?? "",
+                image: item?.whatsappImage[0] ?? "",
+              }))
+            ); */
 
       return;
     }
+    setIsFetchingWhatsappTemplates(false);
   };
 
 
@@ -961,49 +1298,21 @@ export default function Customer() {
   };
 
 
-  //Fetch dropdown data
+  // Fetch dropdown data safely and concurrently
   const fetchFields = async () => {
-    /*     await handleFieldOptions(
-          [
-            { key: "StatusAssign", staticData: ["Assigned", "Unassigned"] },
-            { key: "Campaign", fetchFn: getCampaign },
-            { key: "CustomerType", fetchFn: getTypes },
-            { key: "CustomerSubtype", fetchFn: getSubtype },
-            { key: "City", fetchFn: getCity },
-            { key: "Location", fetchFn: getLocation },
-            { key: "User", fetchFn: getAllAdmins },
-          ],
-          setFieldOptions
-        ); */
+    // console.log(" called here")
+    await Promise.all([
+      handleFieldOptionsObject(objectFields, setFieldOptions),
+      handleFieldOptions(arrayFields, setFieldOptions)
+    ]);
   };
 
-  // Object-based fields (for ObjectSelect)
-  const objectFields = [
-    { key: "Campaign", fetchFn: getCampaign },
-    { key: "CustomerType", staticData: [] },
-    { key: "CustomerSubtype", staticData: [] },
-    { key: "City", fetchFn: getCity },
-    { key: "Location", staticData: [] }, // dependent
-    { key: "SubLocation", staticData: [] }, // dependent
-
-  ];
-
-  // Simple array fields (for normal Select)
-  const arrayFields = [
-    { key: "StatusAssign", staticData: ["Assigned", "Unassigned"] },
-    { key: "User", fetchFn: getAllAdmins },
-    { key: "ReferenceId", fetchFn: getReferences },
-    { key: "Price", fetchFn: getPrice },
-  ];
 
 
-  useEffect(() => {
-    const loadFieldOptions = async () => {
-      await handleFieldOptionsObject(objectFields, setFieldOptions);
-      await handleFieldOptions(arrayFields, setFieldOptions);
-    };
-    loadFieldOptions();
-  }, []);
+
+
+
+
 
 
   // Run this whenever parent filter changes
@@ -1108,7 +1417,11 @@ export default function Customer() {
   };
 
   const handleSelectUser = (id: string) => {
-    setSelectUser(prev => (prev === id ? undefined : id)); //  only one user at a time
+    setSelectUser((prev) =>
+      prev.includes(id)
+        ? prev.filter((userId) => userId !== id)
+        : [...prev, id]
+    ); //  only one user at a time
   };
 
   const handleSelectMailtemplate = (id: string) => {
@@ -1138,22 +1451,32 @@ export default function Customer() {
 
     const payload: customerAssignInterface = {
       assignToId: selectedUser,
+      action: assignAction,
       ...(assignMode === "selected"
         ? { customerIds: selectedCustomers }
         : { campaign: selectedCampaign }),
     };
 
-    const response = await assignCustomer(payload);
+    setIsAssignLoading(true);                        // ✅ start loader
+    try {
+      const response = await assignCustomer(payload);
 
-    if (response.success) {
-      toast.success("Customers assigned successfully");
-      await getCustomers();
+      if (response.success) {
+        toast.success(
+          assignAction === "remove"
+            ? "Customers unassigned successfully"
+            : "Customers assigned successfully"
+        );
+        await getCustomers();
+        setIsAssignOpen(false);
+        return response;
+      }
+
+      toast.error(response.message);
       setIsAssignOpen(false);
-      return response;
+    } finally {
+      setIsAssignLoading(false);                     // ✅ always stop loader
     }
-//console.log(" faraz is here wow brother ",response)
-   toast.error(response.message);
-    setIsAssignOpen(false);
   };
 
   const handleMailAll = async () => {
@@ -1161,6 +1484,8 @@ export default function Customer() {
       toast.error("Please select a template");
       return;
     }
+
+    setIsMailSendLoading(true);
 
     const payload: mailAllCustomerInterface = {
       customerIds: selectedCustomers,
@@ -1173,9 +1498,11 @@ export default function Customer() {
     if (response) {
       toast.success("Email customers succesfully")
       setIsMailAllOpen(false);
+      setIsMailSendLoading(false);
       return response
     }
     toast.error("failed to email customers")
+    setIsMailSendLoading(false);
     setIsMailAllOpen(false);
   };
 
@@ -1184,6 +1511,8 @@ export default function Customer() {
       toast.error("Please select a template");
       return;
     }
+
+    setIsWhatsappSendLoading(true);
 
     const payload: whatsappAllCustomerInterface = {
       customerIds: selectedCustomers,
@@ -1196,9 +1525,11 @@ export default function Customer() {
     if (response) {
       toast.success("Whatsapp customers succesfully")
       setIsWhatsappAllOpen(false);
+      setIsWhatsappSendLoading(false);
       return response
     }
     toast.error("failed to whatsapp customers")
+    setIsWhatsappSendLoading(false);
     setIsWhatsappAllOpen(false);
   };
 
@@ -1257,6 +1588,39 @@ export default function Customer() {
     router.push(`/followups/customer/edit/${id}`);
   }
 
+  const handleUpdateTemperature = async (id: string, value: string) => {
+
+    //  console.log(" id is ", id, "payload is ", value)
+
+    const formData = new FormData();
+    formData.append("LeadTemperature", value.toString());
+
+    const res = await updateCustomer(id, formData);
+
+    if (res) {
+      setTemperatureDialogData((prev: any) => ({
+        ...prev,
+        current: value
+      }));
+
+      setCustomerData(prev =>
+        prev.map(customer =>
+          customer._id === id
+            ? { ...customer, LeadTemperature: value }
+            : customer
+        )
+      );
+
+      toast.success(`Marked as ${value.toUpperCase()}`);
+      setIsTemperatureDialogOpen(false);
+      return;
+    }
+
+
+    toast.error("Failed to update");
+
+  };
+
   const deleteThisFollowup = async (data: FollowupDeleteDialogDataInterface) => {
     //alert(id)
     if (!data) return;
@@ -1276,18 +1640,22 @@ export default function Customer() {
 
 
   const handleTableDialogData = async (contactno: string) => {
+    setIsDupContactTableLoading(true);
+
     const queryParams = new URLSearchParams();
-    queryParams.append("Limit", "100000");
-    queryParams.append("Skip", "0");
+    /*     queryParams.append("Limit", "100000");
+        queryParams.append("Skip", "0"); */
     queryParams.append("ContactNumber", contactno);
     const data = await getFilteredCustomer(queryParams.toString());
     if (data.length > 0) {
       // console.log(" data of contact no is ", data)
       const mapped = data.map(mapCustomer);
       setTableDialogCustomerData(mapped)
+      setIsDupContactTableLoading(false);
       return mapped
     }
     toast.error("Sever Error, please try again")
+    setIsDupContactTableLoading(false);
     return [];
   }
 
@@ -1295,8 +1663,8 @@ export default function Customer() {
     if (duplicateContacts[contactNo] !== undefined) return duplicateContacts[contactNo];
 
     const queryParams = new URLSearchParams();
-    queryParams.append("Limit", "100000");
-    queryParams.append("Skip", "0");
+    /*  queryParams.append("Limit", "100000");
+     queryParams.append("Skip", "0"); */
     queryParams.append("ContactNumber", contactNo);
 
     const data = await getFilteredCustomer(queryParams.toString());
@@ -1315,46 +1683,242 @@ export default function Customer() {
   };
 
   useEffect(() => {
-    currentRows.forEach(item => {
+    /*   currentRows.forEach(item => {
       isDuplicateContactNo(item.ContactNumber, item._id);
-    });
-  }, [currentRows]);
+    }); */
+    if (currentRows.length > 0) {
+      checkDuplicateContactsBatch();
+    }
+  }, [JSON.stringify(currentRows.map(r => r.ContactNumber))]);
 
-  const aiGenieSearch = async () => {
-    if (!keywordInput.trim()) return;
+  useEffect(() => {
+    totalCustomersRef.current = totalCustomers;
+  }, [totalCustomers]);
+
+  const checkDuplicateContactsBatch = async () => {
+    const contactNumbers = currentRows.map(item => item.ContactNumber);
+
+    const data = await getDuplicateContacts({ contactNumbers: contactNumbers });
+    // console.log(" contact dup data ", data)
+
+    // Expected response: { "9876543210": true, "9999999999": false }
+
+    setDuplicateContacts((data || {}) as Record<string, boolean>);
+  };
+
+  const aiGenieSearch = async (keyword?: string) => {
+    const finalKeyword = keyword ?? keywordInput;
+
+    if (!finalKeyword.trim()) return;
+
+    // console.log(" searching for ", finalKeyword);
 
     await wait(800);
 
-    // STEP 2
     await changeStep(STEPS.SHOW);
-    await wait(800)
+    await wait(800);
 
-    // STEP 3
     const filtersOverride = {
       ...filters,
-      Keyword: keywordInput,
+      Keyword: finalKeyword,
     };
 
     if (filters.SearchIn.length > 0) {
       filtersOverride.SearchIn = filters.SearchIn;
     }
-    const data = await handleSelectChange("Keyword", keywordInput, filtersOverride);
+
+    const data = await handleSelectChange("Keyword", finalKeyword, filtersOverride);
+
     const count = data?.length ?? 0;
 
     await wait(1000);
 
     setAiLoading(false);
 
+    return {
+      data,
+      count: totalCustomers, // still risky but we'll fix below
+    };
   };
 
+  const handleAgentCalling = async (id: string) => {
+
+    const payload = {
+      customerId: id
+    }
+
+    const res = await startCallByAIAgent(payload);
+
+    // console.log(" response is here ", res);
+
+    if (res) {
+      toast.success("call initiated successfully");
+      return;
+    }
+  }
 
 
 
+  const avatarColors = [
+    { bg: "bg-[#EEEDFE]", text: "text-[#3C3489]", tag: "bg-[#EEEDFE] text-[#3C3489]" },
+    { bg: "bg-[#E1F5EE]", text: "text-[#085041]", tag: "bg-[#E1F5EE] text-[#085041]" },
+    { bg: "bg-[#FAEEDA]", text: "text-[#633806]", tag: "bg-[#FAEEDA] text-[#633806]" },
+    { bg: "bg-[#E6F1FB]", text: "text-[#0C447C]", tag: "bg-[#E6F1FB] text-[#0C447C]" },
+  ];
 
+  const startListening = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.start();
+    setIsListening(true); // 👈 START UI
+
+    // ⏱ Auto stop after 10 sec
+    const timeout = setTimeout(() => {
+      recognition.stop();
+    }, 10000);
+
+    recognition.onresult = async (event: any) => {
+      const transcript = event.results[0][0].transcript;
+
+      setKeywordInput(transcript);
+      setAiLoading(true);
+      setCurrentStep(STEPS.SEARCH)
+      // DIRECT CALL (no state dependency)
+      await aiGenieSearch(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      clearTimeout(timeout);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false); // 👈 STOP UI
+      clearTimeout(timeout);
+    };
+
+
+  };
+  const playSound = () => {
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0; // restart every time
+        audioRef.current.play();
+        //  console.log("working yes ")
+      }
+    }, 100);
+  };
+
+  const handleSend = async () => {
+    if (!keywordInput.trim() || aiLoading) return;
+
+    const userText = keywordInput;
+
+    // 1. Show user message
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: userText },
+    ]);
+
+    setKeywordInput('');
+    setAiLoading(true);
+    setCurrentStep(STEPS.SEARCH);
+
+    try {
+      // 2. Call your existing logic
+      const result = await aiGenieSearch(userText);
+
+      // 3. Show AI response (use real later, dummy for now)
+      await new Promise(requestAnimationFrame);
+
+      const total = totalCustomersRef.current;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          text:
+            /*  result?.message || */
+            `Found ${total} matching leads for "${userText}". Showing best results based on AI scoring.`,
+        },
+      ]);
+
+
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          text: 'Something went wrong while finding matches.',
+        },
+      ]);
+    } finally {
+      setAiLoading(false);
+      setCurrentStep('');
+    }
+  };
+
+  const AGENTS_TYPE_ICON: Record<string, any> = {
+    Outreach: <Sparkles />,
+    Analytics: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335552/img-8_twulvb.png" alt="Analytics" className=" object-contain w-10 h-10" />,
+    Calling: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335521/img-6_mky5rb.png" alt="Calling" className=" object-contain w-10 h-10" />,
+    Research: <img src="/icons/research.png" alt="Research" />,
+    Automation: <img src="/icons/automation.png" alt="Automation" />,
+    Followup: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335523/img-7_xjwzbl.png" alt="Followup" className=" object-contain w-10 h-10" />,
+    Matching: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-2_l1xdll.png" alt="Matching" className="object-contain w-10 h-10" />,
+    Qualification: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-1_nz99v7.png" alt="Qualification" className=" object-contain w-10 h-10" />,
+    Recommendation: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-3_scja92.png" alt="Recommendation" className=" object-contain w-10 h-10" />,
+    Mining: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-3_scja92.png" alt="Mining" className=" object-contain w-10 h-10" />,
+    Social: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335521/img-4_damgxf.png" alt="Social" className=" object-contain w-10 h-10" />,
+    Script: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335553/img-10_ajsusz.png" alt="Social" className=" object-contain w-10 h-10" />,
+    Assistant: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335552/img-8_twulvb.png" alt="Analytics" className=" object-contain w-10 h-10" />,
+    default: "AG",
+  };
+
+  const closeDeal = async (id: string) => {
+    const response = await closeCustomerDeal(id);
+    if (response) {
+      setIsDealCloseOpen(false); setDealCloseData(null);
+      toast.success("Deal closed successfully");
+
+      setCustomerData((prevData) =>
+        prevData.filter((customer) => customer?._id !== id)
+      );
+      return;
+    }
+    toast.error("Failed to close deal");
+  };
 
 
   return (
     <ProtectedRoute>
+      <WhatsAppActionMenu
+        isOpen={isActionMenuOpen}
+        onClose={() => setIsActionMenuOpen(false)}
+        onSelectTemplate={() => {
+          setIsWhatsappAllOpen(true);
+          fetchWhatsappTemplates();
+        }}
+        onSelectProperties={() => {
+          setIsSendPropertiesOpen(true);
+        }}
+        onSelectDirect={() => {
+          setIsSendDirectMessageOpen(true);
+        }}
+      />
+
       {/* whatsapp all popup */}
       <Toaster position="top-right" />
       {isWhatsappAllOpen && selectedCustomers.length > 0 && (
@@ -1369,8 +1933,20 @@ export default function Customer() {
             setSelectedCustomers([]);
             setIsWhatsappAllOpen(false)
           }}
+          isLoading={isWhatsappSendLoading}
+          isFetchingData={isFetchingWhatsappTemplates}
         />
       )}
+      <SendDirectWhatsappDialog
+        isOpen={isSendDirectMessageOpen}
+        onClose={() => setIsSendDirectMessageOpen(false)}
+        customerIds={selectedCustomers}
+      />
+      <SendPropertiesWhatsAppPopup
+        isOpen={isSendPropertiesOpen}
+        onClose={() => setIsSendPropertiesOpen(false)}
+        customerIds={selectedCustomers}
+      />
       {/* mail all popup */}
       {isMailAllOpen && selectedCustomers.length > 0 && (
         <ListPopup
@@ -1384,6 +1960,8 @@ export default function Customer() {
             setSelectedCustomers([]);
             setIsMailAllOpen(false)
           }}
+          isLoading={isMailSendLoading}
+          isFetchingData={isFetchingMailTemplates}
         />
       )}
 
@@ -1401,24 +1979,44 @@ export default function Customer() {
 
 
 
-      <CustomerEditDialog
-        isOpen={isEditOpen}
-        customerId={customerToEdit}
-        onClose={() => {
-          setIsEditOpen(false);
-          setCustomerToEdit(null);
-        }}
-        onCustomerUpdated={handleCustomerUpdated}
-      />
 
+
+
+      {/* today customer dialogue */}
+      <TodayCustomerDialog
+        isOpen={isTodayDialogOpen}
+        data={todaycustomerData}
+        onClose={() => setIsTodayDialogOpen(false)}
+        onDelete={(item) => {
+          setIsDeleteDialogOpen(true);
+          setDialogType("delete");
+
+          setDialogData({
+            id: item._id,
+            customerName: item.Name,
+            ContactNumber: item.ContactNumber,
+          });
+        }}
+        onEdit={(item) => {
+          handleEditClick(item._id)
+        }}
+        onDeleteAll={(ids) => {
+          setSelectedCustomers(ids);
+          setIsDeleteAllDialogOpen(true);
+          setDeleteAllDialogData({});
+          //  console.log(" ids are ", ids)
+        }}
+      />
 
       {/* customer by contact number */}
       <TableDialog
         isOpen={isTableDialogOpen}
+        isLoading={isDupContactTableLoading}
         title="Customers By"
         data={tableDialogcustomerData}
         onClose={() => {
           setIsTableDialogOpen(false);
+          setTableDialogCustomerData([]);
         }}
         renderActions={(item) => (
           <div className="grid grid-cols-2 max-md:flex gap-3 items-center h-full">
@@ -1440,8 +2038,7 @@ export default function Customer() {
             >
               <MdEdit />
             </Button>
-
-            <Button
+            {admin?.role === "administrator" && <Button
               sx={{ backgroundColor: "#FDECEA", color: "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
               onClick={() => {
                 setIsDeleteDialogOpen(true);
@@ -1455,12 +2052,23 @@ export default function Customer() {
             >
               <MdDelete />
             </Button>
+            }
 
 
           </div>
         )}
       />
 
+
+      <CustomerEditDialog
+        isOpen={isEditOpen}
+        customerId={customerToEdit}
+        onClose={() => {
+          setIsEditOpen(false);
+          setCustomerToEdit(null);
+        }}
+        onCustomerUpdated={handleCustomerUpdated}
+      />
 
       {/* Delete Dialog */}
       <DeleteDialog<DeleteDialogDataInterface>
@@ -1494,6 +2102,13 @@ export default function Customer() {
           setIsFollowupDeleteDialogOpen(false);
         }}
         onDelete={deleteThisFollowup}
+      />
+
+      <ShortlistManagerPopup
+        isOpen={isShortlistDialogOpen}
+        onClose={() => { setIsShortlistDialogOpen(false); setShortlistDialogData(null); }}
+        customerId={shortlistDialogData?.id ?? ""}
+        customerName={shortlistDialogData?.name}
       />
 
       <FollowupAddDialog
@@ -1644,6 +2259,182 @@ export default function Customer() {
         )
       }
 
+      {
+        isDealCloseOpen && (
+          <PopupMenu onClose={() => { setIsDealCloseOpen(false); setDealCloseData(null); }}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-lighter)] flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Close Deal</h3>
+                    <p className="text-xs text-gray-500">This action will mark the deal as closed</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-700 mb-5">
+                  Are you sure you want to close the deal for{" "}
+                  <span className="font-semibold text-gray-900">{dealCloseData?.name}</span>?
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setDealCloseData(null)
+                      setIsDealCloseOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => closeDeal(dealCloseData?.id)}
+                    // disabled={loading}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {/*  {loading && (
+              <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+              </svg>
+            )} */}
+                    Yes, Close Deal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </PopupMenu>
+        )
+      }
+
+      {
+        isTemperatureDialogOpen && temperatureDialogData && (
+          <PopupMenu
+            onClose={() => {
+              setIsTemperatureDialogOpen(false);
+              setTemperatureDialogData(null);
+            }}
+          >
+            <div className="flex flex-col bg-white rounded-3xl shadow-2xl max-w-[380px] w-full m-3 overflow-hidden"
+              style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.18)" }}
+            >
+              {/* Header */}
+              <div
+                className="relative px-6 pt-6 pb-5 overflow-hidden"
+                style={{ background: "linear-gradient(135deg, var(--color-secondary-darker) 0%, var(--color-secondary) 100%)" }}
+              >
+                {/* Decorative circles */}
+                <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-10 bg-white" />
+                <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full opacity-10 bg-white" />
+
+                <div className="relative flex justify-between items-start">
+                  <div>
+                    <p className="text-white/60 text-xs font-medium uppercase tracking-widest mb-1">Lead Status</p>
+                    <h2 className="text-white text-xl font-bold leading-tight">Update Temperature</h2>
+                    <p className="text-white/80 text-sm mt-1 font-medium">{temperatureDialogData.name}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsTemperatureDialogOpen(false);
+                      setTemperatureDialogData(null);
+                    }}
+                    className="w-8 h-8 cursor-pointer rounded-full flex items-center justify-center bg-white/15 hover:bg-white/25 transition-colors mt-0.5"
+                  >
+                    <IoMdClose className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="flex flex-col gap-2.5 p-5">
+
+                {/* HOT */}
+                <button
+                  onClick={() => handleUpdateTemperature(temperatureDialogData.id, "hot")}
+                  className={`group cursor-pointer relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${temperatureDialogData.current === "hot"
+                    ? "border-red-400 bg-red-50 shadow-sm shadow-red-100"
+                    : "border-gray-100 hover:border-red-200 hover:bg-red-50/50"
+                    }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition-all ${temperatureDialogData.current === "hot" ? "bg-red-100" : "bg-gray-100 group-hover:bg-red-100"
+                    }`}>
+                    🔥
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">Hot</p>
+                    <p className="text-xs text-gray-400 mt-0.5">High chance to convert</p>
+                  </div>
+                  {temperatureDialogData.current === "hot" && (
+                    <div className="w-5 h-5 rounded-full bg-red-400 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+
+
+                {/* WARM */}
+                <button
+                  onClick={() => handleUpdateTemperature(temperatureDialogData.id, "warm")}
+                  className={`group cursor-pointer relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${temperatureDialogData.current === "warm"
+                    ? "border-yellow-400 bg-yellow-50 shadow-sm shadow-yellow-100"
+                    : "border-gray-100 hover:border-yellow-200 hover:bg-yellow-50/50"
+                    }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition-all ${temperatureDialogData.current === "warm" ? "bg-yellow-100" : "bg-gray-100 group-hover:bg-yellow-100"
+                    }`}>
+                    🌤️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">Warm</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Moderate interest</p>
+                  </div>
+                  {temperatureDialogData.current === "warm" && (
+                    <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+
+                {/* COLD */}
+                <button
+                  onClick={() => handleUpdateTemperature(temperatureDialogData.id, "cold")}
+                  className={`group cursor-pointer relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${temperatureDialogData.current === "cold"
+                    ? "border-blue-400 bg-blue-50 shadow-sm shadow-blue-100"
+                    : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/50"
+                    }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition-all ${temperatureDialogData.current === "cold" ? "bg-blue-100" : "bg-gray-100 group-hover:bg-blue-100"
+                    }`}>
+                    ❄️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">Cold</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Low or no interest</p>
+                  </div>
+                  {temperatureDialogData.current === "cold" && (
+                    <div className="w-5 h-5 rounded-full bg-blue-400 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+
+              </div>
+
+              {/* Footer hint */}
+              <p className="text-center text-xs text-gray-300 pb-4">Tap an option to update the lead status</p>
+            </div>
+          </PopupMenu>
+        )
+      }
+
       {/* Mobile Customer Page */}
       <div className=" sm:hidden min-h-[calc(100vh-56px)] overflow-auto max-sm:py-2">
 
@@ -1786,13 +2577,193 @@ export default function Customer() {
 
 
             <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
+            {/* Keyword Search */}
+            <form className="flex  max-lg:flex-col justify-between items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (keywordInput.trim() === "")
+                  return
+                setAiLoading(true);
+                setCurrentStep(STEPS.SEARCH)
+                aiGenieSearch();
+              }}
+            >
 
+              <div className=" w-full ">
+                <div>
+                  <div className=" flex justify-between">
+                    <label className="flex gap-1 mb-2 items-center text-sm font-bold text-[var(--color-secondary-darker)] ml-1">{aiLoading ? <span>
+                      <BounceLoader
+                        loading={true}
+                        color="var(--color-primary)"
+                        size={25}
+                        aria-label="Loading Spinner"
+                        data-testid="loader"
+                      /></span> : <span><img className=" w-[25px] " src="/aiBot.png" /></span>
+                    }
+                      <div className="">AI Genie</div>
+
+
+                    </label>
+                    {/*  {isListening && (
+                          <div className="flex items-center gap-2.5 mt-2 ml-1 px-3 py-2 rounded-xl bg-red-50 border border-red-100 w-fit">
+                           
+                            <div className="flex items-center gap-[3px]">
+                              {[0, 1, 2, 3].map((i) => (
+                                <span
+                                  key={i}
+                                  className="block w-[3px] rounded-full bg-red-500"
+                                  style={{
+                                    animation: `soundBar 0.8s ease-in-out infinite alternate`,
+                                    animationDelay: `${i * 0.15}s`,
+                                    height: "14px",
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            <p className="text-red-500 text-xs font-semibold tracking-wide">
+                              Listening…
+                            </p>
+
+                           
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                            </span>
+
+                            <style>{`
+      @keyframes soundBar {
+        from { transform: scaleY(0.3); opacity: 0.5; }
+        to   { transform: scaleY(1);   opacity: 1;   }
+      }
+    `}</style>
+                          </div>
+                        )} */}
+                  </div>
+                  <p className={`text-gray-400 font-light text-xs ml-2 mb-2  flex items-center gap-[1px] `}>
+                    <span
+                      className={`transition-opacity duration-300 `}
+                    >
+                      {currentStep}
+                    </span>
+
+                    {aiLoading && <span className="translate-y-[2px]">
+                      <BeatLoader size={2} color="gray" />
+                    </span>}
+
+                  </p>
+                  <div className="">
+
+                    <div className=" flex justify-between items-center border border-gray-300 rounded-md w-full">
+                      <input
+                        type="text"
+                        placeholder="What you want to search?"
+                        className="outline-none w-full px-3 py-2 "
+                        value={keywordInput}
+                        onChange={(e) => setKeywordInput(e.target.value)}
+                      />
+                      <span
+                        className={`relative mr-3 cursor-pointer flex items-center justify-center`}
+                        onClick={() => {
+                          playSound();      // 🔊 sound plays
+                          startListening(); // 🎤 mic starts
+                        }}
+                      >
+                        {/* Pulse Ring */}
+                        {isListening && (
+                          <span className="absolute inline-flex h-8 w-8 rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                        )}
+
+                        {/* Mic Icon */}
+                        <span
+                          className={`relative z-10 p-2 rounded-full transition-all duration-300 
+    ${isListening ? "bg-red-500 text-white scale-110" : "text-gray-500 hover:text-blue-500"}
+  `}
+                        >
+                          <FaMicrophone />
+                        </span>
+                      </span>
+                      <span className=" cursor-pointer mr-3" onClick={() => setToggleAiGenieSearchBy(!toggleAiGenieSearchBy)}>{toggleAiGenieSearchBy ? <FaCaretDown /> : <FaCaretUp />}</span>
+                    </div>
+
+                    <div className={` mt-5 overflow-hidden transition-all duration-300 ${toggleAiGenieSearchBy ? " h-0" : " h-[150px]"}`}>
+                      {/* Unselected Fields */}
+                      <div className="flex flex-wrap gap-2 px-3 mb-5">
+                        {SEARCH_FIELDS.filter(f => !filters.SearchIn.includes(f)).map((field) => (
+                          <button
+                            key={field}
+                            type="button"
+                            className="px-2 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition"
+                            onClick={() =>
+                              setFilters(prev => ({
+                                ...prev,
+                                SearchIn: [...prev.SearchIn, field],
+                              }))
+                            }
+                          >
+                            {field.toLowerCase()}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Selected Fields */}
+                      <div className="">
+                        {filters.SearchIn.length > 0 && <h5 className=" text-gray-500 text-sm my-2 mx-2">Selected</h5>}
+                        <div className="flex flex-wrap gap-2 px-3">
+
+                          {filters.SearchIn.map((field) => (
+                            <div
+                              key={field}
+                              className="group relative flex items-center px-2 py-1 border border-blue-400 rounded-md text-sm bg-blue-100"
+                            >
+                              {field.toLowerCase()}
+                              <button
+                                className="ml-2 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity text-sm text-[var(--color-primary)]"
+                                onClick={() =>
+                                  setFilters(prev => ({
+                                    ...prev,
+                                    SearchIn: prev.SearchIn.filter(f => f !== field),
+                                  }))
+                                }
+                              >
+                                <IoMdClose />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className={` flex justify-center items-center w-full transition duration-300  ${toggleAiGenieSearchBy ? " lg:-mt-32" : " lg:mt-5"} `}>
+                {!aiLoading ? <button type="submit" className="border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
+                  Explore
+                </button> : <button type="button" className="flex gap-1 justify-center items-center border border-[var(--color-primary)]  bg-[var(--color-primary)] text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
+                  Exploring <HashLoader
+                    loading={true}
+                    color="white"
+                    size={12}
+                    aria-label="Loading Spinner"
+                    data-testid="loader"
+                  />
+                </button>}
+
+                <button type="reset" onClick={clearFilter} className="text-red-500 cursor-pointer hover:underline text-sm px-5 py-2  rounded-md ml-3">
+                  Clear Search
+                </button>
+              </div>
+            </form>
             <div className=" w-full flex justify-end"></div>
-            <div className=" w-full flex justify-end">
+            {/*  <div className=" w-full flex justify-end">
               <button type="reset" onClick={clearFilter} className="text-red-500 cursor-pointer hover:underline text-sm px-5 py-2 rounded-md">
                 Clear Search
               </button>
-            </div>
+            </div> */}
 
           </DynamicAdvance>
         </div>
@@ -1803,9 +2774,16 @@ export default function Customer() {
           onAdd={(id) => addFollowupFromDialogue(id)}
           onEdit={(id) => /* router.push(`/customer/edit/${id}`) */ handleEditClick(id)}
           onWhatsappClick={(lead) => {
+            /*   setSelectedCustomers([lead._id]);
+              setIsWhatsappAllOpen(true);
+              fetchWhatsappTemplates(); */
+
+            // 1. Prepare the customer data
             setSelectedCustomers([lead._id]);
-            setIsWhatsappAllOpen(true);
-            fetchWhatsappTemplates();
+            setSelectUser([lead._id]);
+
+            // 2. Open the choice menu instead of the template menu directly
+            setIsActionMenuOpen(true);
           }}
           onMailClick={(lead) => {
             setSelectedCustomers([lead._id]);
@@ -1832,6 +2810,45 @@ export default function Customer() {
             setIsTableDialogOpen(true);
             handleTableDialogData(contactNumber);
           }}
+          renderActions={(item) => (
+            <div className=" flex justify-between w-full">
+
+              <Button
+                className=" bg-gray-500"
+                sx={{ backgroundColor: item.isChecked ? "#E8F5E9" : "#FFF0F5", color: item.isChecked ? "var(--color-primary)" : "#E91E63", minWidth: "32px", minHeight: "35px", borderRadius: "100%" }}
+                onClick={() =>
+                  handleChecked({ id: item._id, isChecked: item.isChecked })
+                }
+              >
+                {item.isChecked ? <IoCheckmarkDoneOutline size={20} /> : <IoCheckmark size={20} />}
+              </Button>
+
+              <Button
+                sx={{
+                  backgroundColor: temperatureConfig[item.LeadTemperature || "cold"]?.bg,
+                  color: temperatureConfig[item.LeadTemperature || "cold"]?.color,
+                  minWidth: "32px",
+                  height: "35px",
+                  borderRadius: "100%",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    filter: "brightness(0.95)",
+                    transform: "scale(1.05)"
+                  }
+                }}
+                onClick={() => {
+                  setTemperatureDialogData({
+                    id: item._id,
+                    name: item.CustomerName,
+                    current: item.LeadTemperature || "cold"
+                  });
+                  setIsTemperatureDialogOpen(true);
+                }}
+              >
+                {temperatureConfig[item.LeadTemperature || "cold"]?.icon}
+              </Button>
+            </div>
+          )}
         />
 
 
@@ -1856,63 +2873,109 @@ export default function Customer() {
         {/* Assign User Popup */}
         {isAssignOpen && (
           <ListPopup
-            title="Assign Customers"
+            title={assignAction === "remove" ? "Remove Assigned" : "Assign Customers"}
             list={users}
             selected={selectedUser}
             onSelect={handleSelectUser}
             onSubmit={handleAssignto}
-            submitLabel="Assign"
+            submitLabel={assignAction === "remove" ? "Remove" : "Assign"}
             onClose={() => setIsAssignOpen(false)}
+            multiSelect
+            showPreview={false}
+            isLoading={isAssignLoading}
+            isFetchingData={isFetchingUsers}
           >
             <div className="px-6 flex flex-col gap-3">
 
-              {/* Mode Switch */}
-              <div className="flex gap-4 text-sm">
-                <label className="flex gap-2 items-center">
-                  <input
-                    type="radio"
-                    checked={assignMode === "selected"}
-                    onChange={() => setAssignMode("selected")}
-                  />
-                  Selected Customers
-                </label>
-
-                <label className="flex gap-2 items-center" onClick={() => fetchCampaigns()}>
-                  <input
-                    type="radio"
-                    checked={assignMode === "campaign"}
-                    onChange={() => setAssignMode("campaign")}
-                  />
-                  Entire Campaign
-                </label>
+              {/* Assign / Remove Toggle */}
+              <div className="flex gap-1 p-1 bg-gray-100 rounded-lg text-sm font-medium w-fit">
+                <button
+                  onClick={() => setAssignAction("assign")}
+                  className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${assignAction === "assign"
+                    ? "bg-white text-[var(--color-primary)] shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                    }`}
+                >
+                  Assign
+                </button>
+                <button
+                  onClick={() => setAssignAction("remove")}
+                  className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${assignAction === "remove"
+                    ? "bg-white text-red-500 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                    }`}
+                >
+                  Remove
+                </button>
               </div>
 
-              {/* Campaign Dropdown */}
-              {assignMode === "campaign" && (
-                /*   <select
-                    className="border rounded px-3 py-2"
-                    value={selectedCampaign || ""}
-                    onChange={(e) => setSelectedCampaign(e.target.value)}
-                  >
-                    <option value="">Select Campaign</option>
-                
-                    {campaignList
-                      .filter((c) => c.Status === "Active") // optional: only active
-                      .map((c) => (
-                        <option key={c._id} value={c.Name}>
-                          {c.Name}
-                        </option>
-                      ))}
-                  </select> */
+              {/* Mode Switch */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-4 text-sm">
+
+                  <label className="flex gap-2 items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={assignMode === "selected"}
+                      onChange={() => setAssignMode("selected")}
+                    />
+                    Selected Customers
+                  </label>
+
+                  {admin?.role !== "user" && (
+                    <label
+                      className={`flex gap-2 items-center transition-opacity ${hasUserRoleSelected
+                        ? "opacity-40 cursor-not-allowed"     // ✅ dimmed when blocked
+                        : "cursor-pointer"
+                        }`}
+                      onClick={() => {
+                        if (!hasUserRoleSelected) fetchCampaigns(); // ✅ no-op when blocked
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        disabled={hasUserRoleSelected}            // ✅ actually disabled
+                        checked={assignMode === "campaign"}
+                        onChange={() => {
+                          if (!hasUserRoleSelected) setAssignMode("campaign");
+                        }}
+                      />
+                      Entire Campaign
+                    </label>
+                  )}
+                </div>
+
+                {/* ✅ Inline amber hint — only visible when a "user" role assignee is selected */}
+                {hasUserRoleSelected && admin?.role !== "user" && (
+                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      />
+                    </svg>
+                    Campaign mode is unavailable — selected assignee(s) include a{" "}
+                    <span className="font-semibold">User</span> role
+                  </div>
+                )}
+              </div>
+
+              {/* Campaign Dropdown — double guarded */}
+              {assignMode === "campaign" && admin?.role !== "user" && !hasUserRoleSelected && (
                 <SingleSelect
-                  options={
-                    campaignList
-                      .filter((c) => c.Status === "Active")
-                      .map((c) => (c.Name))
-                  }
+                  options={campaignList
+                    .filter((c) => c.Status === "Active")
+                    .map((c) => c.Name)}
                   value={selectedCampaign}
                   label="Select Campaign"
-                  onChange={(v) => setSelectedCampaign(v)}
+                  onChange={(v: any) => setSelectedCampaign(v)}
                   isSearchable
                 />
               )}
@@ -1949,8 +3012,380 @@ export default function Customer() {
           </div>
 
 
+
+          <div className="mb-4 mx-4 flex justify-between items-center">
+            <div className=" flex justify-center items-center gap-3">
+              <button
+                onClick={handleOpenTodayCustomers}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/8 dark:bg-[var(--color-primary)]/12 text-[var(--color-primary)] text-[13px] font-semibold transition-all duration-150 hover:bg-[var(--color-primary)]/15 hover:border-[var(--color-primary)]/40 active:scale-[0.97] cursor-pointer"
+              >
+                <HiCalendar size={14} className="opacity-80" />
+                Today
+                {todaycustomerData?.length > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[var(--color-primary)] text-white text-[10px] font-bold leading-none">
+                    {todaycustomerData.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => router.push("/customer/closed-deals")}
+                className="flex items-center cursor-pointer gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                Closed Deals
+              </button>
+            </div>
+
+
+            <AIAgentDropdown
+              agents={agents}
+              setSelectedAgent={setSelectedAgent}
+              setIsAIAgentDialogOpen={setIsAIAgentDialogOpen}
+              isLoading={isAgentsLoading}
+            />
+          </div>
+
+          <BottomPopup onClose={() => setIsAIAgentDialogOpen(false)} isOpen={isAIAgentsDialogOpen}>
+            {({ isMaximized, toggleMaximize }) => (
+              <div className={` flex flex-row relative overflow-hidden ${isMaximized ? "" : "rounded-t-2xl"}  h-[100%] w-full `} style={{ background: "#ffffff" }}>
+
+                {/* LEFT DARK SIDEBAR */}
+                {
+                  !isMaximized && <AIAgentSidebar
+                    selectedAgent={selectedAgent}
+                    AGENTS_TYPE_ICON={AGENTS_TYPE_ICON}
+                    onClose={() => setIsAIAgentDialogOpen(false)}
+                  />
+                }
+
+
+                {/* RIGHT WORKSPACE */}
+                <div className="flex-1 flex flex-col pb-5 w-full overflow-hidden bg-white">
+
+                  {/* ── Top strip ── */}
+                  <div
+                    className="flex items-center justify-between relative px-5 flex-shrink-0 border-b"
+                    style={{ height: "44px", background: "#f8fafc", borderColor: "#e2e8f0" }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                        Workspace
+                      </span>
+                      <div className="w-px h-3.5" style={{ background: "#e2e8f0" }} />
+                      {/* Live badge */}
+                      <div
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+                        style={{
+                          background: aiLoading ? "rgba(56,189,248,0.1)" : "rgba(16,185,129,0.08)",
+                          border: `1px solid ${aiLoading ? "rgba(56,189,248,0.25)" : "rgba(16,185,129,0.2)"}`,
+                        }}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{
+                            background: aiLoading ? "#38bdf8" : "#10b981",
+                            animation: aiLoading ? "pulse 1s infinite" : "none",
+                          }}
+                        />
+                        <span
+                          className="text-[9px] font-mono font-medium flex items-center gap-1"
+                          style={{ color: aiLoading ? "#0ea5e9" : "#10b981" }}
+                        >
+                          {currentStep || "Ready"}
+                          {aiLoading && <BeatLoader size={2} color="#0ea5e9" />}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons: maximize + close */}
+                    <div className="flex items-center gap-1 absolute top-2 right-2 z-50">
+
+                      {/* Maximize / Minimize button */}
+                      <button
+                        onClick={toggleMaximize}
+                        title={isMaximized ? "Minimize" : "Maximize"}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-[#94a3b8] hover:bg-[#e0f2fe] hover:text-[#0284c7] transition-all cursor-pointer"
+                      >
+                        {isMaximized ? (
+                          /* Minimize icon — two inward arrows */
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="4 14 10 14 10 20" />
+                            <polyline points="20 10 14 10 14 4" />
+                            <line x1="10" y1="14" x2="3" y2="21" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                          </svg>
+                        ) : (
+                          /* Maximize icon — two outward arrows */
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 3 21 3 21 9" />
+                            <polyline points="9 21 3 21 3 15" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                            <line x1="3" y1="21" x2="10" y2="14" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {/* Close button */}
+                      <button
+                        onClick={() => setIsAIAgentDialogOpen(false)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444] transition-all cursor-pointer"
+                      >
+                        <IoMdClose size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── MATCHING AGENT ── */}
+                  {selectedAgent && selectedAgent.type === "Matching" ? (
+                    <div className="flex flex-col overflow-hidden flex-1">
+
+                      {/* Chat messages — your existing AIChatMessages component, restyled */}
+                      <AIChatMessages
+                        agentName={selectedAgent.name}
+                        messages={messages}
+                        aiLoading={aiLoading}
+                        currentStep={currentStep}
+                        hints={[
+                          "High-value leads in Mumbai",
+                          "Active last 30 days",
+                          "Enterprise, no contact",
+                        ]}
+                        onHintClick={(hint) => setKeywordInput(hint)}
+                        maxHeight="100%"
+                      />
+
+                      {/* ── INPUT AREA ── */}
+                      <div
+                        className="flex-shrink-0 border-t px-4  pt-3"
+                        style={{ borderColor: "#e2e8f0", background: "#ffffff" }}
+                      >
+                        {/* Collapsible fields panel */}
+                        <div
+                          className="overflow-hidden transition-all duration-300"
+                          style={{
+                            maxHeight: toggleAiGenieSearchBy ? "160px" : "0",
+                            opacity: toggleAiGenieSearchBy ? 1 : 0,
+                            marginBottom: toggleAiGenieSearchBy ? "10px" : "0",
+                          }}
+                        >
+                          <div
+                            className="rounded-[14px] p-3 border"
+                            style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}
+                          >
+                            <p className="text-[9px] font-semibold uppercase tracking-widest mb-2" style={{ color: "#94a3b8" }}>
+                              Search in fields
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {SEARCH_FIELDS.filter(f => !filters.SearchIn.includes(f)).map((field) => (
+                                <button
+                                  key={field}
+                                  type="button"
+                                  onClick={() => setFilters(prev => ({ ...prev, SearchIn: [...prev.SearchIn, field] }))}
+                                  className="text-[10.5px] font-medium px-2 py-1 rounded-lg border transition-all"
+                                  style={{ borderColor: "#e2e8f0", background: "#ffffff", color: "#64748b" }}
+                                >
+                                  {field.toLowerCase()}
+                                </button>
+                              ))}
+                            </div>
+                            {filters.SearchIn.length > 0 && (
+                              <div className="mt-2 pt-2 border-t" style={{ borderColor: "#e2e8f0" }}>
+                                <p className="text-[9px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "#94a3b8" }}>
+                                  Active
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {filters.SearchIn.map((field) => (
+                                    <div
+                                      key={field}
+                                      className="flex items-center gap-1 text-[10.5px] font-medium px-2 py-1 rounded-lg"
+                                      style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd" }}
+                                    >
+                                      {field.toLowerCase()}
+                                      <button
+                                        type="button"
+                                        onClick={() => setFilters(prev => ({ ...prev, SearchIn: prev.SearchIn.filter(f => f !== field) }))}
+                                        className="leading-none ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Textarea + send */}
+                        <div
+                          className={`flex items-end gap-2 rounded-2xl px-3.5 pt-2.5 pb-2 transition-all duration-200 border-[1.5px] ${aiLoading
+                            ? "border-sky-200"
+                            : "border-slate-200 focus-within:border-sky-300 focus-within:shadow-[0_0_0_3px_rgba(125,211,252,0.12)]"
+                            }`}
+                          style={{ background: "#ffffff" }}
+                        >
+                          <div className="flex-1">
+                            <textarea
+                              rows={2}
+                              placeholder="Describe the leads you're looking for…"
+                              className="w-full resize-none bg-transparent outline-none leading-relaxed disabled:opacity-40"
+                              style={{ fontSize: "12.5px", color: "#0f172a" }}
+                              value={keywordInput}
+                              disabled={aiLoading}
+                              onChange={(e) => setKeywordInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (keywordInput.trim() && !aiLoading) {
+                                    setAiLoading(true);
+                                    setCurrentStep(STEPS.SEARCH);
+                                    handleSend();
+                                  }
+                                }
+                              }}
+                            />
+                            <div className="flex items-center justify-between mt-1 pt-1.5 border-t" style={{ borderColor: "#f1f5f9" }}>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={aiLoading}
+                                  onClick={() => setToggleAiGenieSearchBy(!toggleAiGenieSearchBy)}
+                                  className="flex items-center gap-1 text-[10px] font-medium transition-colors disabled:opacity-40"
+                                  style={{ color: "#94a3b8" }}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M7 8h10M11 12h4" />
+                                  </svg>
+                                  Fields {toggleAiGenieSearchBy ? "▴" : "▾"}
+                                  {filters.SearchIn.length > 0 && (
+                                    <span
+                                      className="ml-1 rounded-full px-1.5 text-[8.5px] font-bold"
+                                      style={{ background: "#e0f2fe", color: "#0284c7" }}
+                                    >
+                                      {filters.SearchIn.length}
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={clearFilter}
+                                  disabled={aiLoading}
+                                  className="text-[10px] transition-colors disabled:opacity-40 hover:text-rose-500"
+                                  style={{ color: "#94a3b8" }}
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                              <span className="text-[9.5px] font-mono" style={{ color: "#cbd5e1" }}>↵ to send</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={aiLoading || !keywordInput.trim()}
+                            onClick={() => {
+                              if (keywordInput.trim() && !aiLoading) {
+                                setAiLoading(true);
+                                setCurrentStep(STEPS.SEARCH);
+                                handleSend();
+                              }
+                            }}
+                            className="w-9 h-9 mb-1 rounded-[11px] flex items-center justify-center text-white transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 active:scale-95 hover:brightness-110"
+                            style={{ background: "#0284c7", boxShadow: "0 2px 8px rgba(2,132,199,0.3)" }}
+                          >
+                            {aiLoading
+                              ? <BounceLoader loading color="#fff" size={10} />
+                              : <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                              </svg>
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    /* ── FOLLOWUP AGENT ── */
+                  ) : selectedAgent && selectedAgent.type === "Followup" ? (
+                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                      <FollowupAgentWorkspace data={selectedAgent} />
+                    </div>
+
+                    /* ── Qualification STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Qualification" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <QualificationAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── RECOMMEND CUSTOMER STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Recommendation" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <RecommendAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── CALLING STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Calling" ? (
+                    <div className="flex-1 overflow-y-auto px-6">
+                      <CallingAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+                  ) : selectedAgent && selectedAgent.type === "Followup" ? (
+                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                      <FollowupAgentWorkspace data={selectedAgent} />
+                    </div>
+
+                    /* ── Data Mining STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Mining" ? (
+                    <div className="flex-1 overflow-hidden ">
+                      <SocialMiningAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── Error STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Social" ? (
+                    <div className="flex-1 overflow-hidden ">
+                      <SocialAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── Error STATE ── */
+                  ) : selectedAgent && selectedAgent.type === "Analytics" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <AnalyticsAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── SCRIPT AGENT ── */
+                  ) : selectedAgent && selectedAgent.type === "Script" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <ScriptAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── ASSISTANT  ── */
+                  ) : selectedAgent && selectedAgent.type === "Assistant" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <WebhookAgentWorkspace isOpen={isAIAgentsDialogOpen} agent={selectedAgent} />
+                    </div>
+
+                    /* ── Error STATE ── */
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center py-16 text-center px-6">
+                      <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                        style={{ background: "#fff1f2" }}
+                      >
+                        <span className="text-xl" style={{ color: "#f43f5e" }}>!</span>
+                      </div>
+                      <p className="text-[14px] font-semibold" style={{ color: "#334155" }}>Something went wrong</p>
+                      <p className="text-[12px] mt-1" style={{ color: "#94a3b8" }}>Please try again later</p>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
+          </BottomPopup>
+
           {/* TABLE */}
           <section className="flex flex-col mt-6 rounded-md">
+
             <div className="m-5 relative">
 
               <div className="flex justify-between cursor-pointer items-center py-1 px-2 border border-gray-800 rounded-md" onClick={() => setToggleSearchDropdown(!toggleSearchDropdown)}>
@@ -2121,8 +3556,14 @@ export default function Customer() {
                       }}
                       isSearchable
                     />
+
                     <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label={getLabel("ReferenceId", "Reference Id")} onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
-                    <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label={getLabel("Price", "Price")} onChange={(v) => handleSelectChange("Price", v)} isSearchable />
+                    {/*   <SingleSelect options={Array.isArray(fieldOptions?.MinPrice) ? fieldOptions.MinPrice : []} value={filters.MinPrice[0]} label={getLabel("MinPrice", "Min Price")} onChange={(v) => handleSelectChange("MinPrice", v)} isSearchable />
+                    <SingleSelect options={Array.isArray(fieldOptions?.MaxPrice) ? fieldOptions.MaxPrice : []} value={filters.MaxPrice[0]} label={getLabel("MaxPrice", "Max Price")} onChange={(v) => handleSelectChange("MaxPrice", v)} isSearchable /> */}
+
+                    <SingleSelect options={Array.isArray(fieldOptions?.LeadType) ? fieldOptions.LeadType : []} value={filters.LeadType[0]} label={getLabel("LeadType", "Lead Type")} onChange={(v) => handleSelectChange("LeadType", v)} isSearchable />
+                    <SingleSelect options={Array.isArray(fieldOptions?.LeadTemperature) ? fieldOptions.LeadTemperature : []} value={filters.LeadTemperature[0]} label={getLabel("LeadTemperature", "Lead Status")} onChange={(v) => handleSelectChange("LeadTemperature", v)} isSearchable />
+                    {/*   <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label={getLabel("Price", "Price")} onChange={(v) => handleSelectChange("Price", v)} isSearchable /> */}
                     {/* <SingleSelect options={Array.isArray(fieldOptions?.isFavourite) ? fieldOptions.isFavourite : []} value={filters.isFavourite[0]} label="favroutie" onChange={(v) => handleSelectChange("isFavourite", v)}  /> */}
 
                     <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
@@ -2133,8 +3574,11 @@ export default function Customer() {
                     }} />
                     <DateSelector label="From" value={filters.StartDate[0]} onChange={(v) => handleSelectChange("StartDate", v)} />
                     <DateSelector label="To" value={filters.EndDate[0]} onChange={(v) => handleSelectChange("EndDate", v)} />
+                    <PriceRange
+                      filters={filters}
+                      handleSelectChange={handleSelectChange}
+                    />
                     <div>
-
                       <input
                         id="favouriteFilter"
                         type="checkbox"
@@ -2148,11 +3592,11 @@ export default function Customer() {
                       <label
                         htmlFor="favouriteFilter"
                         className={`
-        inline-flex items-center justify-center
-        h-10 px-4 rounded-md border
-        text-sm font-medium cursor-pointer
-        transition-colors duration-200 gap-2
-                 ${filters.isFavourite
+    inline-flex items-center justify-center
+    h-10 px-4 rounded-md border
+    text-sm font-medium cursor-pointer
+    transition-colors duration-200 gap-2
+    ${filters.isFavourite
                             ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
                             : "bg-white text-gray-700 border-gray-300"
                           }
@@ -2162,6 +3606,7 @@ export default function Customer() {
                         Favourite
                       </label>
                     </div>
+
                   </div>
 
 
@@ -2181,19 +3626,56 @@ export default function Customer() {
 
                   <div className=" w-[80%] ">
                     <div>
-                      <label className="flex gap-1 mb-2 items-center text-sm font-bold text-[var(--color-secondary-darker)] ml-1">{aiLoading ? <span>
-                        <BounceLoader
-                          loading={true}
-                          color="var(--color-primary)"
-                          size={25}
-                          aria-label="Loading Spinner"
-                          data-testid="loader"
-                        /></span> : <span><img className=" w-[25px] " src="/aiBot.png" /></span>
-                      }
-                        <div className="">AI Genie</div>
+                      <div className=" flex justify-between">
+                        <label className="flex gap-1 mb-2 items-center text-sm font-bold text-[var(--color-secondary-darker)] ml-1">{aiLoading ? <span>
+                          <BounceLoader
+                            loading={true}
+                            color="var(--color-primary)"
+                            size={25}
+                            aria-label="Loading Spinner"
+                            data-testid="loader"
+                          /></span> : <span><img className=" w-[25px] " src="/aiBot.png" /></span>
+                        }
+                          <div className="">AI Genie</div>
 
 
-                      </label>
+                        </label>
+                        {/*  {isListening && (
+                          <div className="flex items-center gap-2.5 mt-2 ml-1 px-3 py-2 rounded-xl bg-red-50 border border-red-100 w-fit">
+                           
+                            <div className="flex items-center gap-[3px]">
+                              {[0, 1, 2, 3].map((i) => (
+                                <span
+                                  key={i}
+                                  className="block w-[3px] rounded-full bg-red-500"
+                                  style={{
+                                    animation: `soundBar 0.8s ease-in-out infinite alternate`,
+                                    animationDelay: `${i * 0.15}s`,
+                                    height: "14px",
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            <p className="text-red-500 text-xs font-semibold tracking-wide">
+                              Listening…
+                            </p>
+
+                           
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                            </span>
+
+                            <style>{`
+      @keyframes soundBar {
+        from { transform: scaleY(0.3); opacity: 0.5; }
+        to   { transform: scaleY(1);   opacity: 1;   }
+      }
+    `}</style>
+                          </div>
+                        )} */}
+                      </div>
                       <p className={`text-gray-400 font-light text-xs ml-2 mb-2  flex items-center gap-[1px] `}>
                         <span
                           className={`transition-opacity duration-300 `}
@@ -2207,6 +3689,7 @@ export default function Customer() {
 
                       </p>
                       <div className="">
+
                         <div className=" flex justify-between items-center border border-gray-300 rounded-md w-full">
                           <input
                             type="text"
@@ -2215,6 +3698,27 @@ export default function Customer() {
                             value={keywordInput}
                             onChange={(e) => setKeywordInput(e.target.value)}
                           />
+                          <span
+                            className={`relative mr-3 cursor-pointer flex items-center justify-center`}
+                            onClick={() => {
+                              playSound();      // 🔊 sound plays
+                              startListening(); // 🎤 mic starts
+                            }}
+                          >
+                            {/* Pulse Ring */}
+                            {isListening && (
+                              <span className="absolute inline-flex h-8 w-8 rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                            )}
+
+                            {/* Mic Icon */}
+                            <span
+                              className={`relative z-10 p-2 rounded-full transition-all duration-300 
+    ${isListening ? "bg-red-500 text-white scale-110" : "text-gray-500 hover:text-blue-500"}
+  `}
+                            >
+                              <FaMicrophone />
+                            </span>
+                          </span>
                           <span className=" cursor-pointer mr-3" onClick={() => setToggleAiGenieSearchBy(!toggleAiGenieSearchBy)}>{toggleAiGenieSearchBy ? <FaCaretUp /> : <FaCaretDown />}</span>
                         </div>
 
@@ -2267,11 +3771,7 @@ export default function Customer() {
                         </div>
                       </div>
 
-
                     </div>
-
-
-
 
                   </div>
 
@@ -2296,10 +3796,26 @@ export default function Customer() {
 
               </div>
             </div>
+            {/*  <AgentSelector
+  agents={agents}
+  keywordInput={keywordInput}
+  setKeywordInput={setKeywordInput}
+  filters={filters}
+  setFilters={setFilters}
+  aiLoading={aiLoading}
+  setAiLoading={setAiLoading}
+  currentStep={currentStep}
+  setCurrentStep={setCurrentStep}
+  toggleAiGenieSearchBy={toggleAiGenieSearchBy}
+  setToggleAiGenieSearchBy={setToggleAiGenieSearchBy}
+  STEPS={STEPS}
+  aiGenieSearch={aiGenieSearch}
+  clearFilter={clearFilter}
+/> */}
             <div className="  relative" ref={scrollRef}>
 
               <div className=" flex justify-between items-center sticky top-0 left-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full">
-                <div className="flex gap-10 items-center px-3 py-4 min-w-max text-gray-700">
+                <div className="flex gap-5 items-center px-3 py-4 text-[13px] min-w-max text-gray-700">
 
                   <label htmlFor="selectall" className=" relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)]  rounded-tr-sm rounded-br-sm  border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer">
                     <div className=" absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300 "></div>
@@ -2324,11 +3840,27 @@ export default function Customer() {
                   <button type="button" className=" relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)]  rounded-tr-sm rounded-br-sm  border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
                     if (selectedCustomers.length <= 0) toast.error("please select atleast 1 customer")
                     else {
-                      setIsWhatsappAllOpen(true);
-                      fetchWhatsappTemplates()
+                      /*  setIsWhatsappAllOpen(true);
+                       fetchWhatsappTemplates() */
+                      setIsActionMenuOpen(true);
+
                     }
                   }}><div className=" absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300 "></div>
-                    <span className="relative">SMS All</span></button>
+                    <span className="relative">Whatsapp</span></button>
+                  {/*  <button
+                    type="button"
+                    className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer"
+                    onClick={() => {
+                      if (selectedCustomers.length <= 0) {
+                        toast.error("Please select at least 1 customer");
+                      } else {
+                        setIsSendPropertiesOpen(true);
+                      }
+                    }}
+                  >
+                    <div className="absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300"></div>
+                    <span className="relative">Send Properties</span>
+                  </button> */}
                   {/*                 <button type="button" className=" relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)]  rounded-tr-sm rounded-br-sm  border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer">
                   <div className=" absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300 "></div>
                   <span className="relative ">Mass Update</span>
@@ -2350,8 +3882,8 @@ export default function Customer() {
                     </button>
                   }
 
-
                 </div>
+
                 {
                   isFilteredTrigger && <p className={`text-gray-400 font-light text-xs mx-3  mt-2  flex items-center gap-[1px] `}>
                     Customers Found {totalCustomers}
@@ -2367,7 +3899,6 @@ export default function Customer() {
 
                       {/* ✅ SELECT ALL CHECKBOX COLUMN */}
                       <th className="px-2 py-3 border border-[var(--color-secondary-dark)] bg-[var(--color-primary)] sticky left-0 z-20 text-left">
-
                         <input
                           id="selectall"
                           type="checkbox"
@@ -2386,7 +3917,7 @@ export default function Customer() {
                           <th
                             key={header.key}
                             className={`px-2 py-3 border border-[var(--color-secondary-dark)] text-left  
-                ${header.key === "sno" ? "sticky left-7.5 z-20 bg-[var(--color-primary)]" : ""}`}
+              ${header.key === "sno" ? "sticky left-7.5 z-20 bg-[var(--color-primary)]" : ""}`}
                           >
                             {header.label}
                           </th>
@@ -2433,8 +3964,10 @@ export default function Customer() {
                                   case "subtype":
                                     cellValue = item.SubType;
                                     break;
+                                  case "leadtype":
+                                    cellValue = item.LeadType;
+                                    break;
                                   case "City":
-
                                     cellValue = item.City;
                                     break;
                                   case "Area":
@@ -2443,13 +3976,14 @@ export default function Customer() {
                                   case "Email":
                                     cellValue = item.Email;
                                     break;
-
                                   case "Facillities":
                                     cellValue = item.Facillities;
                                     break;
-
                                   case "CustomerId":
                                     cellValue = item.CustomerId;
+                                    break;
+                                  case "ClientId":
+                                    cellValue = item.ClientId;
                                     break;
                                   case "Adderess":
                                     cellValue = (<>
@@ -2462,7 +3996,6 @@ export default function Customer() {
                                       >
                                         {item.Adderess}
                                       </span>
-
                                     </>);
                                     break;
                                   case "CustomerYear":
@@ -2488,11 +4021,11 @@ export default function Customer() {
                                       <>
                                         {item.ContactNumber && (
                                           <>
-                                            <div className=" text-center">{item.ContactNumber}</div>
+                                            <div className=" text-center" onClick={() => handleAgentCalling(item._id)}>{item.ContactNumber}</div>
                                             <span className="flex">
                                               <Button
                                                 component="a"
-                                                href={`tel:${item.ContactNumber}`}
+                                                onClick={() => handleCall({ customerNumber: item.ContactNumber })}
                                                 sx={{
                                                   backgroundColor: "#E8F5E9",
                                                   color: "var(--color-primary)",
@@ -2515,7 +4048,7 @@ export default function Customer() {
                                                 }}
                                                 onClick={() => {
                                                   setSelectedCustomers([item._id]);
-                                                  setSelectUser(item._id);
+                                                  setSelectUser([item._id]);
                                                   setIsMailAllOpen(true);
                                                   fetchEmailTemplates();
                                                 }}
@@ -2524,10 +4057,12 @@ export default function Customer() {
                                               </Button>
                                               <Button
                                                 onClick={() => {
+                                                  // 1. Prepare the customer data
                                                   setSelectedCustomers([item._id]);
-                                                  setSelectUser(item._id);
-                                                  setIsWhatsappAllOpen(true);
-                                                  fetchWhatsappTemplates();
+                                                  setSelectUser([item._id]);
+
+                                                  // 2. Open the choice menu instead of the template menu directly
+                                                  setIsActionMenuOpen(true);
                                                 }}
                                                 sx={{
                                                   backgroundColor: "#E8F5E9",
@@ -2567,13 +4102,10 @@ export default function Customer() {
                                     );
                                     break;
                                   case "assign":
-                                    cellValue = item.AssignTo;
+                                    cellValue = item.AssignTo.map((e: any) => e.name + ", ");
                                     break;
                                   case "reference":
                                     cellValue = item.ReferenceId;
-                                    break;
-                                  case "date":
-                                    cellValue = item.Date;
                                     break;
                                   case "url":
                                     cellValue = item.URL;
@@ -2587,13 +4119,14 @@ export default function Customer() {
                                   case "price":
                                     cellValue = item.Price;
                                     break;
-
+                                  case "date":
+                                    cellValue = item.Date;
+                                    break;
                                   case "actions":
                                     cellValue = (
                                       <div className="grid grid-cols-2 gap-3 items-center h-full">
                                         <Button
                                           sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
-                                          /*  onClick={() => router.push(`/followups/customer/add/${item._id}`)} */
                                           onClick={() => {
                                             setSelectedCustomerFollowupId(item._id);
                                             setIsFollowupOpen(true);
@@ -2603,11 +4136,11 @@ export default function Customer() {
                                         </Button>
                                         <Button
                                           sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
-                                          onClick={() => /* router.push(`/customer/edit/${item._id}`) */ handleEditClick(item._id)}
+                                          onClick={() => handleEditClick(item._id)}
                                         >
                                           <MdEdit />
                                         </Button>
-                                        <Button
+                                        {admin?.role === "administrator" && <Button
                                           sx={{ backgroundColor: "#FDECEA", color: "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
                                           onClick={() => {
                                             setIsDeleteDialogOpen(true);
@@ -2620,7 +4153,7 @@ export default function Customer() {
                                           }}
                                         >
                                           <MdDelete />
-                                        </Button>
+                                        </Button>}
                                         <Button
                                           sx={{ backgroundColor: "#FFF0F5", color: item.isFavourite ? "#E91E63" : "#C62828", minWidth: "32px", height: "32px", borderRadius: "8px" }}
                                           onClick={() =>
@@ -2647,6 +4180,107 @@ export default function Customer() {
                                         >
                                           <UserPlus />
                                         </Button>
+                                        <Button
+                                          sx={{
+                                            backgroundColor: temperatureConfig[item.LeadTemperature || "cold"]?.bg,
+                                            color: temperatureConfig[item.LeadTemperature || "cold"]?.color,
+                                            minWidth: "32px",
+                                            height: "32px",
+                                            borderRadius: "8px",
+                                            transition: "all 0.2s ease",
+                                            "&:hover": {
+                                              filter: "brightness(0.95)",
+                                              transform: "scale(1.05)"
+                                            }
+                                          }}
+                                          onClick={() => {
+                                            setTemperatureDialogData({
+                                              id: item._id,
+                                              name: item.CustomerName,
+                                              current: item.LeadTemperature || "cold"
+                                            });
+                                            setIsTemperatureDialogOpen(true);
+                                          }}
+                                        >
+                                          {temperatureConfig[item.LeadTemperature || "cold"]?.icon}
+                                        </Button>
+                                        <Button
+                                          onClick={() => {
+                                            router.push(`/customer/${item._id}`)
+                                          }}
+                                          sx={{
+                                            backgroundColor: "#E8F5E9",
+                                            color: "var(--color-primary)",
+                                            minWidth: "32px",
+                                            height: "32px",
+                                            borderRadius: "8px",
+                                            transition: "all 0.2s ease",
+                                            "&:hover": {
+                                              filter: "brightness(0.95)",
+                                              transform: "scale(1.05)"
+                                            }
+                                          }}
+                                        >
+                                          <FaEye size={12} />
+                                        </Button>
+                                        <Button
+                                          sx={{
+                                            backgroundColor: "var(--color-primary-lighter)",
+                                            color: "var(--color-primary)",
+                                            minWidth: "32px",
+                                            height: "32px",
+                                            borderRadius: "8px",
+                                            transition: "all 0.2s ease",
+                                            "&:hover": {
+                                              backgroundColor: "var(--color-primary-light)",
+                                              transform: "scale(1.05)"
+                                            }
+                                          }}
+                                          onClick={() => {
+                                            setShortlistDialogData({
+                                              id: item._id,
+                                              name: item.Name,
+                                            });
+                                            setIsShortlistDialogOpen(true);
+                                          }}
+                                        >
+                                          {
+                                            item?.Shortlisted ? (
+                                              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                                              </svg>
+                                            ) : (
+                                              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                                              </svg>
+                                            )
+                                          }
+                                        </Button>
+                                        <Button
+                                          onClick={() => {
+                                            setDealCloseData({
+                                              id: item._id,
+                                              name: item.Name,
+                                              current: item.LeadTemperature || "cold"
+                                            });
+                                            setIsDealCloseOpen(true);
+                                          }}
+                                          sx={{
+                                            backgroundColor: "#E8F5E9",
+                                            color: "var(--color-primary)",
+                                            minWidth: "32px",
+                                            height: "32px",
+                                            borderRadius: "8px",
+                                            transition: "all 0.2s ease",
+                                            "&:hover": {
+                                              filter: "brightness(0.95)",
+                                              transform: "scale(1.05)"
+                                            }
+                                          }}
+                                        >
+                                          <FaHandshakeSimple size={20} />
+                                        </Button>
+
                                       </div>
                                     );
                                     break;
@@ -2656,17 +4290,17 @@ export default function Customer() {
                               }
 
                               return (
-                                <td key={col.key} className={`px-2 py-3 border border-gray-200 break-all whitespace-normal 
-                                    ${col.key !== "sno" ? "min-w-[100px]" : ""}
-            ${col.key === "description" && item.Description ? "min-w-[160px]" : ""} 
-            ${col.key === "sno" ? "sticky left-7.5  bg-white max-w-[60px]" : ""}
-             ${col.key === "type" ? "max-w-[80px]" : ""}
-             ${col.key === "subtype" ? "max-w-[90px]" : ""} 
-             ${col.key === "contact" ? "max-w-[140px]" : ""} 
-             ${col.key === "reference" ? "max-w-[70px]" : ""}
-              ${col.key === "date" ? "min-w-[100px]" : ""} 
-             ${col.key === "actions" ? "min-w-[90px] align-middle" : ""}
-             `}>
+                                <td key={col.key} className={`px-2 py-3 border border-gray-200 break-words whitespace-normal align-top 
+                    ${col.key !== "sno" ? "min-w-[100px]" : ""}
+                    ${col.key === "description" && item.Description ? "min-w-[160px]" : ""} 
+                    ${col.key === "sno" ? "sticky left-7.5  bg-white max-w-[60px]" : ""}
+                    ${col.key === "type" ? "max-w-[80px]" : ""}
+                    ${col.key === "subtype" ? "max-w-[90px]" : ""} 
+                    ${col.key === "contact" ? "max-w-[140px]" : ""} 
+                    ${col.key === "reference" ? "max-w-[70px]" : ""}
+                    ${col.key === "date" ? "min-w-[100px]" : ""} 
+                    ${col.key === "actions" ? "min-w-[90px] align-top" : ""}
+                `}>
                                   {cellValue}
                                 </td>
                               );

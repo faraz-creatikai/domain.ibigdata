@@ -17,6 +17,8 @@ import {
   LucideCoins,
   ShieldUser,
   Settings,
+  UsersIcon,
+  ExternalLink,
 } from "lucide-react";
 
 import { NavMain } from "../components/nav-main";
@@ -30,6 +32,11 @@ import {
 } from "@/components/ui/sidebar";
 import { title } from "process";
 import { useAuth } from "@/context/AuthContext";
+import { FaRobot } from "react-icons/fa";
+import { TbSocial } from "react-icons/tb";
+import { RiFilePaper2Fill } from "react-icons/ri";
+import { GrConfigure } from "react-icons/gr";
+import { sidebarLogoPath } from "@/app/data/PlatformData";
 
 // This is sample data.
 const data = {
@@ -60,6 +67,16 @@ const data = {
       icon: PlusSquare,
     },
     {
+      title: "External Leads",
+      url: "/minedlead",
+      icon: ExternalLink,
+    },
+        {
+      title: "Clients",
+      url: "/clients",
+      icon: UsersIcon,
+    },
+    {
       title: "Company Project",
       url: "/company_project",
       icon: User,
@@ -75,6 +92,16 @@ const data = {
       icon: Info,
     }, */
     {
+      title: "Ai Agents",
+      url: "/aiagents",
+      icon: FaRobot,
+    },
+    {
+      title:"Sales Script",
+      url: "/salesscript",
+      icon: RiFilePaper2Fill
+    },
+    {
       title: "Schedules",
       url: "/schedules",
       icon: PenSquareIcon,
@@ -83,6 +110,11 @@ const data = {
       title: "Task",
       url: "/task",
       icon: Pointer,
+    },
+    {
+      title:"Social Media Manager",
+      url:"/socialmedia-manager",
+      icon: TbSocial
     },
     {
       title: "Masters",
@@ -104,6 +136,10 @@ const data = {
         {
           title: "Customer Subtype",
           url: "/masters/customer-subtype",
+        },
+        {
+          title: "Lead Type",
+          url: "/masters/leadtype",
         },
         {
           title: "City",
@@ -203,6 +239,17 @@ const data = {
       ],
     },
     {
+      title:" Reports",
+      url: "#",
+      icon: LineChart,
+      items:[
+        {
+          title: "Calling Report",
+          url: "/reports/call-report",
+        }
+      ]
+    },
+    {
       title: "Requirements",
       url: "/requirements",
       icon: Home,
@@ -247,13 +294,39 @@ const data = {
         {
           title: "Customer Fields",
           url: "/settings/customer/customer-fields",
-        },]
+        },
+      ]
+    },
+    {
+      title:"Configuration",
+      url:"#",
+      icon: GrConfigure,
+      items:[
+        {
+          title:"AI",
+          url:"/configuration/ai"
+        },
+        {
+          title: "Tabbly",
+          url: "/configuration/tabbly",
+        },
+        {
+          title:"whatsapp",
+          url:"/configuration/whatsapp"
+        },
+        {
+          title:"system",
+          url:"/configuration/system"
+        }
+        
+      ]
     },
     {
       title: "Users",
       url: "/users",
       icon: User2,
     },
+
     {
       title: "Customer Import",
       url: "/imports/customer",
@@ -264,11 +337,8 @@ const data = {
       url: "/imports/contact",
       icon: MessageSquare,
     },
-    /* {
-      title: "Customer Report",
-      url: "/reports/customer",
-      icon: LineChart,
-    },
+    
+    /* 
     {
       title: "Contact Report",
       url: "/reports/contact",
@@ -291,6 +361,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // Hide "Masters" if not admin
     if (item.title === "Masters" && admin?.role !== "administrator") {
       return false;
+    }
+    if(item.title === "Clients" && admin?.role !== "administrator"){
+      return false;
+    }
+    if(item.title === "Ai Agents" && admin?.role !== "administrator"){
+      return false;
+    }
+    if(item.title === "Configuration" && admin?.role !== "administrator"){
+      return false
     }
     return true;
   }).map((item) => {
@@ -321,7 +400,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <ShieldUser className="w-6 h-6" />
         ) : (
           <img
-            src="/logo.webp"
+            src={sidebarLogoPath || "/applogo.jpeg"}
             alt="App Logo"
             className="h-12 w-40"
           />

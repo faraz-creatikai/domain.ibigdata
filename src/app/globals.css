@@ -85,6 +85,7 @@
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
 
+
   /*custom colors */
 --color-primary: #4318C4;
 --color-primary-dark: #3A14A8;
@@ -177,6 +178,60 @@
   }
 }
 
+/* Disable track interaction */
+.range-input {
+  pointer-events: none;
+}
+
+/* Enable only thumb interaction */
+.range-input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  background: #2563eb;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  z-index: 100;
+}
+
+.range-input::-moz-range-thumb {
+  pointer-events: auto;
+  height: 16px;
+  width: 16px;
+  background: #2563eb;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ── Custom Scrollbar Utility Class ── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary);
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary-light);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
 
 /* Tailwind 4 - Remove autofill highlight properly for all themes */

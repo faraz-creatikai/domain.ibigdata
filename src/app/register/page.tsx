@@ -3,7 +3,7 @@
 import React, { useState, useEffect, JSX } from "react";
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
-import { FaUserAlt, FaLock, FaPhone } from "react-icons/fa";
+import { FaUserAlt, FaLock, FaPhone, FaCog, FaGithub, FaGoogle } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { registerRequestUser } from "@/store/requestusers/requestusers";
 import PopupMenu from "../component/popups/PopupMenu";
 import RegisterPopup from "../component/popups/RegisterPopup";
 import { passwordRules, ValidatePassword } from "../utils/ValidatePassword";
+import { IoMdMail } from "react-icons/io";
 
 
 type PasswordValidationResult = {
