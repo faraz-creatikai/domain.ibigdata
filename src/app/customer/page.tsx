@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CiExport, CiSearch } from "react-icons/ci";
 import { IoIosArrowUp, IoIosArrowDown, IoMdClose } from "react-icons/io";
-import { MdEdit, MdDelete, MdAdd, MdFavorite, MdFavoriteBorder, MdEmail } from "react-icons/md";
+import { MdEdit, MdDelete, MdAdd, MdFavorite, MdFavoriteBorder, MdEmail, MdFilterList } from "react-icons/md";
 import Button from '@mui/material/Button';
 import SingleSelect from "@/app/component/SingleSelect";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpRight, Bot, ChevronsLeft, ChevronsRight, PlusSquare, Sparkles, UserPlus, Zap } from "lucide-react";
 import ProtectedRoute from "../component/ProtectedRoutes";
 import toast, { Toaster } from "react-hot-toast";
-import { getCustomer, deleteCustomer, getFilteredCustomer, updateCustomer, assignCustomer, deleteAllCustomer, getDuplicateContacts, getTodayCustomer, startCallByAIAgent, getCallLogs, getCallReport, closeCustomerDeal, getCustomerCount } from "@/store/customer";
+import { getCustomer, deleteCustomer, getFilteredCustomer, updateCustomer, assignCustomer, deleteAllCustomer, getDuplicateContacts, getTodayCustomer, startCallByAIAgent, getCallLogs, getCallReport, closeCustomerDeal, getCustomerCount, getCustomFieldValues } from "@/store/customer";
 import { CheckDialogDataInterface, CustomerAdvInterface, customerAssignInterface, customerGetDataInterface, DeleteDialogDataInterface } from "@/store/customer.interface";
 import DeleteDialog from "../component/popups/DeleteDialog";
 import { getCampaign } from "@/store/masters/campaign/campaign";
@@ -92,6 +92,8 @@ import WebhookAgentWorkspace from "../component/aiagents/WebhookAgentWorkspace";
 import SendPropertiesWhatsAppPopup from "../component/popups/SendPropertiesWhatsappPopup";
 import WhatsAppActionMenu from "../component/popups/WhatsappActionMenu";
 import SendDirectWhatsappDialog from "../component/popups/SendDirectWhatsappDialog";
+import CustomerViewDialog from "../component/popups/CustomerviewDialog";
+import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -182,7 +184,9 @@ export default function Customer() {
   const [isFollowupDeleteDialogOpen, setIsFollowupDeleteDialogOpen] = useState(false);
   const [followupdeleteDialogData, setFollowupDeleteDialogData] = useState<FollowupDeleteDialogDataInterface | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
+  const [customerToView, setCustomerToView] = useState<any>(null);
   const [assignMode, setAssignMode] = useState<"selected" | "campaign">("selected");
   const [selectedCampaign, setSelectedCampaign] = useState<string[] | undefined>([]);
   const [campaignList, setCampaignList] = useState<
@@ -276,6 +280,7 @@ export default function Customer() {
     Limit: ["100"] as string[],
     StartDate: [] as string[],
     EndDate: [] as string[],
+    CustomerFields: {} as Record<string, string>,
   });
 
   const [dependent, setDependent] = useState({
@@ -286,6 +291,40 @@ export default function Customer() {
     Location: { id: "", name: "" },
     SubLocation: { id: "", name: "" },
   });
+
+
+  // reuse customFieldMasters from your column-persistence fix — don't refetch here
+  const [toggleCustomFieldFilter, setToggleCustomFieldFilter] = useState(false);
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const activeCustomFieldCount = useMemo(
+    () => Object.values(filters.CustomerFields || {}).filter((v) => v.trim() !== "").length,
+    [filters.CustomerFields]
+  );
+
+  const humanizeKey = (key: string) =>
+    key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[-_]+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const handleCustomFieldChange = (key: string, value: string) => {
+    const updatedCustomFields = { ...filters.CustomerFields, [key]: value };
+    const updatedFilters = { ...filters, CustomerFields: updatedCustomFields };
+    setFilters(updatedFilters);
+
+    clearTimeout(debounceRef.current[key]);
+    debounceRef.current[key] = setTimeout(() => {
+      handleSelectChange("CustomerFields", updatedCustomFields, updatedFilters);
+    }, 400);
+  };
+
+  const clearCustomFieldFilters = () => {
+    const updatedFilters = { ...filters, CustomerFields: {} };
+    setFilters(updatedFilters);
+    handleSelectChange("CustomerFields", {}, updatedFilters);
+  };
 
   //this is for setting button
   // for header
@@ -308,21 +347,47 @@ export default function Customer() {
   const [exportingCustomerData, setExportingCustomerData] = useState<customerGetDataInterface[]>([]);
   const [duplicateContacts, setDuplicateContacts] = useState<Record<string, boolean>>({});
 
+
+  const [customFieldMasters, setCustomFieldMasters] = useState<string[]>([]);
+  const [customFieldsReady, setCustomFieldsReady] = useState(false);
+
+  const [showCustomFields, setShowCustomFields] = useState(false);
+const [panelOverflow, setPanelOverflow] = useState("hidden");
+
+useEffect(() => {
+  if (!toggleSearchDropdown) setPanelOverflow("hidden");
+}, [toggleSearchDropdown]);
+
+  useEffect(() => {
+    const loadCustomFieldMasters = async () => {
+      try {
+        const res = await getCustomerFields();
+        const active = res.filter((e: any) => e.Status === "Active");
+        setCustomFieldMasters(active.map((f: any) => f.Name));
+      } catch (error) {
+        console.error("Error loading custom field masters:", error);
+      } finally {
+        setCustomFieldsReady(true); // flips even on empty/error, so we don't hang forever
+      }
+    };
+    loadCustomFieldMasters();
+  }, []);
+
   const dynamicFieldKeys = useMemo(() => {
-    if (!customerData.length) return [];
+    // master list is the source of truth so columns don't appear/disappear with pagination or search
+    const keys = new Set<string>(customFieldMasters);
 
-    const keys = new Set<string>();
-
+    // safety net: also surface any custom key that exists on loaded rows but isn't
+    // (yet, or anymore) in the active master list
     customerData.forEach(customer => {
       if (customer.CustomerFields) {
-        Object.keys(customer.CustomerFields).forEach(key => {
-          keys.add(key);
-        });
+        Object.keys(customer.CustomerFields).forEach(key => keys.add(key));
       }
     });
 
     return Array.from(keys);
-  }, [customerData]);
+  }, [customerData, customFieldMasters]);
+
   const DEFAULT_COLUMNS: Column[] = useMemo(() => {
     const staticColumns = [
       { key: "sno", label: "S.No.", isPinned: true, visible: true },
@@ -401,16 +466,16 @@ export default function Customer() {
 
   // header effect
   useEffect(() => {
+    if (!customFieldsReady) return; // don't sync/persist columns until we know the full custom-field set
     setColumns(prevColumns =>
       DEFAULT_COLUMNS.map(defaultCol => {
         const existing = prevColumns.find(c => c.key === defaultCol.key);
-
         return existing
-          ? { ...existing, label: defaultCol.label } // keep user settings
-          : defaultCol; // new column added
+          ? { ...existing, label: defaultCol.label }
+          : defaultCol;
       })
     );
-  }, [DEFAULT_COLUMNS]);
+  }, [DEFAULT_COLUMNS, customFieldsReady]);
 
   const fetchCampaigns = async () => {
     const res = await getCampaign();
@@ -422,6 +487,7 @@ export default function Customer() {
   useEffect(() => {
     localStorage.setItem("table-columns", JSON.stringify(columns));
   }, [columns]);
+
 
   const fetchAiAgents = async () => {
     setIsAgentsLoading(true);
@@ -625,6 +691,21 @@ export default function Customer() {
     setExportingCustomerData(datatoExport);
   }, [selectedCustomers]);
 
+  const [customFieldOptions, setCustomFieldOptions] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const loadCustomFieldValues = async () => {
+      const res = await getCustomFieldValues();
+      setCustomFieldOptions(res || {});
+    };
+    loadCustomFieldValues();
+  }, []);
+
+  // a field only makes sense as a dropdown if it has a reasonable, short set of values —
+  // long free-text custom fields fall back to the text input instead
+  const isDropdownFriendly = (values: string[]) =>
+    values.length > 0 && values.length <= 50 && values.every((v) => v.length <= 40);
+
 
 
   const fetchTodayCustomer = async () => {
@@ -680,6 +761,11 @@ export default function Customer() {
   const handleEditClick = (id: string | number) => {
     setCustomerToEdit(id);
     setIsEditOpen(true);
+  };
+
+  const handleViewClick = (id: string | number) => {
+    setCustomerToView(id);
+    setIsViewOpen(true);
   };
 
   const handleFollowups = async (id: string, Name: string) => {
@@ -981,7 +1067,7 @@ export default function Customer() {
 
   const handleSelectChange = async (
     field: keyof typeof filters,
-    selected: string | string[] | boolean,
+    selected: string | string[] | boolean | Record<string, string>,
     filtersOverride?: typeof filters
   ) => {
     setCustomerTableLoader(true);
@@ -992,13 +1078,15 @@ export default function Customer() {
         ? selected
         : typeof selected === "boolean"
           ? field === "isFavourite"
-            ? selected // keep boolean
+            ? selected
             : selected
               ? ["true"]
               : []
-          : selected
-            ? [selected]
-            : [],
+          : typeof selected === "object" && selected !== null
+            ? selected
+            : selected
+              ? [selected]
+              : [],
     };
 
     setFilters(updatedFilters);
@@ -1015,15 +1103,24 @@ export default function Customer() {
       Object.entries(updatedFilters).forEach(([key, value]) => {
         if (key === "Limit") return;
 
-        if (
-          (key === "StartDate" || key === "EndDate") &&
-          !hasBothDates
-        ) {
+        if ((key === "StartDate" || key === "EndDate") && !hasBothDates) {
           return;
         }
 
         if (key === "isFavourite" && value === true) {
           queryParams.append(key, "true");
+          return;
+        }
+
+        if (key === "CustomerFields") {
+          const active = Object.fromEntries(
+            Object.entries(value as Record<string, string>).filter(
+              ([, v]) => v && v.trim() !== ""
+            )
+          );
+          if (Object.keys(active).length > 0) {
+            queryParams.append("CustomerFields", JSON.stringify(active));
+          }
           return;
         }
 
@@ -1039,7 +1136,6 @@ export default function Customer() {
         queryParams.append("Skip", "0");
       }
 
-      // 👇 ensures loader renders before API call
       await new Promise(requestAnimationFrame);
 
       const data = await getFilteredCustomer(queryParams.toString());
@@ -1056,9 +1152,7 @@ export default function Customer() {
       totalQueryParams.delete("Limit");
       totalQueryParams.delete("Skip");
 
-      const totalfilteredData = await getFilteredCustomer(
-        totalQueryParams.toString()
-      );
+      const totalfilteredData = await getFilteredCustomer(totalQueryParams.toString());
 
       if (totalfilteredData) {
         setTotalCustomers(totalfilteredData.length);
@@ -1069,13 +1163,11 @@ export default function Customer() {
 
       return data;
     } finally {
-      // 👇 ALWAYS runs even if API fails
       setCustomerTableLoader(false);
     }
   };
 
   const clearFilter = async () => {
-    // 1. Reset your filter states
     setFilters({
       StatusAssign: [],
       Campaign: [],
@@ -1097,6 +1189,7 @@ export default function Customer() {
       Limit: ["100"],
       StartDate: [],
       EndDate: [],
+      CustomerFields: {},
     });
 
     setDependent({
@@ -1112,11 +1205,7 @@ export default function Customer() {
     setAiLoading(false);
     setIsFilteredTrigger(false);
 
-    // 2. 🚀 Fire BOTH the data fetch and the count fetch at the same time
-    await Promise.all([
-      getCustomers(),
-      getTotalCustomerPage()
-    ]);
+    await Promise.all([getCustomers(), getTotalCustomerPage()]);
   };
 
   const refreshCustomersWithLastFilters = async () => {
@@ -2068,6 +2157,15 @@ export default function Customer() {
           setCustomerToEdit(null);
         }}
         onCustomerUpdated={handleCustomerUpdated}
+      />
+
+      <CustomerViewDialog
+        isOpen={isViewOpen}
+        customerId={customerToView}
+        onClose={() => {
+          setIsViewOpen(false);
+          setCustomerToView(null);
+        }}
       />
 
       {/* Delete Dialog */}
@@ -3388,414 +3486,358 @@ export default function Customer() {
 
             <div className="m-5 relative">
 
-              <div className="flex justify-between cursor-pointer items-center py-1 px-2 border border-gray-800 rounded-md" onClick={() => setToggleSearchDropdown(!toggleSearchDropdown)}>
-                <h3 className="flex items-center gap-1"><CiSearch />Advance Search</h3>
-                <button
-                  type="button"
+  <div className="flex justify-between cursor-pointer items-center py-1 px-2 border border-gray-800 rounded-md" onClick={() => setToggleSearchDropdown(!toggleSearchDropdown)}>
+    <h3 className="flex items-center gap-1"><CiSearch />Advance Search</h3>
+    <button type="button" className="p-2 hover:bg-gray-200 rounded-md cursor-pointer">
+      {toggleSearchDropdown ? <IoIosArrowUp /> : <IoIosArrowDown />}
+    </button>
+  </div>
 
-                  className="p-2 hover:bg-gray-200 rounded-md cursor-pointer"
-                >
-                  {toggleSearchDropdown ? <IoIosArrowUp /> : <IoIosArrowDown />}
-                </button>
+  <div
+    style={{ overflow: toggleSearchDropdown ? panelOverflow : "hidden" }}
+    className={`transition-all duration-500 ease-in-out px-5 ${toggleSearchDropdown ? "max-h-[3000px]" : "max-h-0"}`}
+    onTransitionEnd={() => {
+      if (toggleSearchDropdown) setPanelOverflow("visible");
+    }}
+  >
+
+    {/* Custom Fields toggle — sits above everything else in the panel */}
+    {customFieldMasters.length > 0 && (
+      <div className="flex items-center justify-between mt-5 mb-1">
+        <button
+          type="button"
+          onClick={() => setShowCustomFields((s) => !s)}
+          className={`flex items-center gap-2 cursor-pointer text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
+            ${showCustomFields
+              ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+              : "bg-white text-gray-600 border-gray-300 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"}`}
+        >
+          <MdFilterList size={14} />
+          Custom Fields
+          {activeCustomFieldCount > 0 && (
+            <span className={`text-[10px] rounded-full px-1.5 leading-4 ${showCustomFields ? "bg-white text-[var(--color-primary)]" : "bg-[var(--color-primary)] text-white"}`}>
+              {activeCustomFieldCount}
+            </span>
+          )}
+          <IoIosArrowDown size={10} className={`transition-transform ${showCustomFields ? "rotate-180" : ""}`} />
+        </button>
+
+        {showCustomFields && activeCustomFieldCount > 0 && (
+          <button
+            type="button"
+            onClick={clearCustomFieldFilters}
+            className="text-red-500 cursor-pointer hover:underline text-xs"
+          >
+            Clear custom fields
+          </button>
+        )}
+      </div>
+    )}
+
+    {/* Custom Fields section — only exists in the DOM while open, so it can never be clipped */}
+    {showCustomFields && customFieldMasters.length > 0 && (
+      <div className="mt-4 mb-5 pb-5 border-b border-gray-200">
+        <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-lg:grid-cols-2">
+          {customFieldMasters.map((key) => {
+            const options = customFieldOptions[key] || [];
+            const useDropdown = isDropdownFriendly(options);
+
+            return (
+              <div key={key}>
+                {useDropdown ? (
+                  <SingleSelect
+                    options={options}
+                    label={humanizeKey(key)}
+                    value={filters.CustomerFields?.[key] || ""}
+                    onChange={(v) => handleCustomFieldChange(key, v)}
+                    isSearchable
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={filters.CustomerFields?.[key] || ""}
+                    onChange={(e) => handleCustomFieldChange(key, e.target.value)}
+                    placeholder={`Search ${humanizeKey(key)}...`}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
+                  />
+                )}
               </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
 
-              <div className={`overflow-hidden ${toggleSearchDropdown ? "overflow-visible max-h-[2000px]" : "overflow-hidden max-h-0"} transition-all duration-500 ease-in-out px-5`}>
-                <div className="flex flex-col gap-5 my-5">
-                  <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-lg:grid-cols-2">
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.Campaign) ? fieldOptions.Campaign : []}
-                      label={getLabel("Campaign", "Campaign")}
-                      value={dependent.Campaign.id}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-                        const selectedObj = fieldOptions.Campaign.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            Campaign: [selectedObj.Name],
-                            CustomerType: [],   // reset
-                            CustomerSubType: []
-                          };
-                          setFilters(updatedFilters);
+    <div className="flex flex-col gap-5 my-5">
+      <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-lg:grid-cols-2">
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.Campaign) ? fieldOptions.Campaign : []}
+          label={getLabel("Campaign", "Campaign")}
+          value={dependent.Campaign.id}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.Campaign.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                Campaign: [selectedObj.Name],
+                CustomerType: [],
+                CustomerSubType: []
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                Campaign: { id: selectedObj._id, name: selectedObj.Name },
+                CustomerType: { id: "", name: "" },
+                CustomerSubType: { id: "", name: "" }
+              }));
+              handleSelectChange("Campaign", selectedObj.Name, updatedFilters)
+            }
+          }}
+        />
 
-                          setDependent(prev => ({
-                            ...prev,
-                            Campaign: { id: selectedObj._id, name: selectedObj.Name },
-                            CustomerType: { id: "", name: "" },   // reset
-                            CustomerSubType: { id: "", name: "" }
-                          }));
-                          handleSelectChange("Campaign", selectedObj.Name, updatedFilters)
-                        }
-                      }}
-                    />
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.CustomerType) ? fieldOptions.CustomerType : []}
+          label={getLabel("CustomerType", "Customer Type")}
+          value={dependent.CustomerType.name}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.CustomerType.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                CustomerType: [selectedObj.Name],
+                CustomerSubType: []
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                CustomerType: { id: selectedObj._id, name: selectedObj.Name },
+                CustomerSubType: { id: "", name: "" }
+              }));
+              handleSelectChange("CustomerType", selectedObj.Name, updatedFilters)
+            }
+          }}
+        />
 
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.CustomerType) ? fieldOptions.CustomerType : []}
-                      label={getLabel("CustomerType", "Customer Type")}
-                      value={dependent.CustomerType.name}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-                        const selectedObj = fieldOptions.CustomerType.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            CustomerType: [selectedObj.Name],   // reset
-                            CustomerSubType: []
-                          };
-                          setFilters(updatedFilters);
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.CustomerSubtype) ? fieldOptions.CustomerSubtype : []}
+          label={getLabel("CustomerSubType", "Customer Subtype")}
+          value={dependent.CustomerSubType.name}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.CustomerSubtype.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                CustomerSubType: [selectedObj.Name]
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                CustomerSubType: { id: selectedObj._id, name: selectedObj.Name }
+              }));
+              handleSelectChange("CustomerSubType", selectedObj.Name, updatedFilters)
+            }
+          }}
+        />
 
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.City) ? fieldOptions.City : []}
+          label={getLabel("City", "City")}
+          value={dependent.City.id}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.City.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                City: [selectedObj.Name],
+                Location: []
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                City: { id: selectedObj._id, name: selectedObj.Name },
+                Location: { id: "", name: "" },
+              }));
+              handleSelectChange("City", selectedObj.Name, updatedFilters)
+            }
+          }}
+        />
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.Location) ? fieldOptions.Location : []}
+          label={getLabel("Location", "Location")}
+          value={dependent.Location.id}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.Location.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                Location: [selectedObj.Name]
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                Location: { id: selectedObj._id, name: selectedObj.Name },
+              }));
+              handleSelectChange("Location", selectedObj.Name, updatedFilters)
+            }
+          }}
+          isSearchable
+        />
+        <ObjectSelect
+          options={Array.isArray(fieldOptions?.SubLocation) ? fieldOptions.SubLocation : []}
+          label={getLabel("SubLocation", "Sub Location")}
+          value={dependent.SubLocation.id}
+          getLabel={(item) => item?.Name || ""}
+          getId={(item) => item?._id || ""}
+          onChange={(selectedId) => {
+            const selectedObj = fieldOptions.SubLocation.find((i) => i._id === selectedId);
+            if (selectedObj) {
+              const updatedFilters = {
+                ...filters,
+                SubLocation: [selectedObj.Name]
+              };
+              setFilters(updatedFilters);
+              setDependent(prev => ({
+                ...prev,
+                SubLocation: { id: selectedObj._id, name: selectedObj.Name },
+              }));
+              handleSelectChange("SubLocation", selectedObj.Name, updatedFilters)
+            }
+          }}
+          isSearchable
+        />
 
-                          setDependent(prev => ({
-                            ...prev,
-                            CustomerType: { id: selectedObj._id, name: selectedObj.Name },   // reset
-                            CustomerSubType: { id: "", name: "" }
-                          }));
-                          handleSelectChange("CustomerType", selectedObj.Name, updatedFilters)
-                        }
-                      }}
+        <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label={getLabel("ReferenceId", "Reference Id")} onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
+        <SingleSelect options={Array.isArray(fieldOptions?.LeadType) ? fieldOptions.LeadType : []} value={filters.LeadType[0]} label={getLabel("LeadType", "Lead Type")} onChange={(v) => handleSelectChange("LeadType", v)} isSearchable />
+        <SingleSelect options={Array.isArray(fieldOptions?.LeadTemperature) ? fieldOptions.LeadTemperature : []} value={filters.LeadTemperature[0]} label={getLabel("LeadTemperature", "Lead Status")} onChange={(v) => handleSelectChange("LeadTemperature", v)} isSearchable />
+        <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
+        <SingleSelect options={["10", "25", "50", "100"]} value={filters.Limit[0]} label="Limit" onChange={(v) => { handleSelectChange("Limit", v) }} />
+        <DateSelector label="From" value={filters.StartDate[0]} onChange={(v) => handleSelectChange("StartDate", v)} />
+        <DateSelector label="To" value={filters.EndDate[0]} onChange={(v) => handleSelectChange("EndDate", v)} />
+        <PriceRange filters={filters} handleSelectChange={handleSelectChange} />
+        <div>
+          <input
+            id="favouriteFilter"
+            type="checkbox"
+            className="hidden"
+            checked={filters.isFavourite}
+            onChange={(e) => handleSelectChange("isFavourite", e.target.checked)}
+          />
+          <label
+            htmlFor="favouriteFilter"
+            className={`inline-flex items-center justify-center h-10 px-4 rounded-md border text-sm font-medium cursor-pointer transition-colors duration-200 gap-2
+              ${filters.isFavourite
+                ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                : "bg-white text-gray-700 border-gray-300"}`}
+          >
+            {filters.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
+            Favourite
+          </label>
+        </div>
+      </div>
+    </div>
 
-                    />
+    {/* Keyword Search */}
+    <form className="flex max-lg:flex-col justify-between items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (keywordInput.trim() === "") return
+        setAiLoading(true);
+        setCurrentStep(STEPS.SEARCH)
+        aiGenieSearch();
+      }}
+    >
+      <div className=" w-[80%] ">
+        <div>
+          <div className=" flex justify-between">
+            <label className="flex gap-1 mb-2 items-center text-sm font-bold text-[var(--color-secondary-darker)] ml-1">
+              {aiLoading ? <span><BounceLoader loading={true} color="var(--color-primary)" size={25} aria-label="Loading Spinner" data-testid="loader" /></span> : <span><img className=" w-[25px] " src="/aiBot.png" /></span>}
+              <div className="">AI Genie</div>
+            </label>
+          </div>
+          <p className={`text-gray-400 font-light text-xs ml-2 mb-2  flex items-center gap-[1px] `}>
+            <span className={`transition-opacity duration-300 `}>{currentStep}</span>
+            {aiLoading && <span className="translate-y-[2px]"><BeatLoader size={2} color="gray" /></span>}
+          </p>
+          <div className="">
+            <div className=" flex justify-between items-center border border-gray-300 rounded-md w-full">
+              <input
+                type="text"
+                placeholder="What you want to search?"
+                className="outline-none w-full px-3 py-2 "
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+              />
+              <span className={`relative mr-3 cursor-pointer flex items-center justify-center`} onClick={() => { playSound(); startListening(); }}>
+                {isListening && (<span className="absolute inline-flex h-8 w-8 rounded-full bg-red-400 opacity-75 animate-ping"></span>)}
+                <span className={`relative z-10 p-2 rounded-full transition-all duration-300 ${isListening ? "bg-red-500 text-white scale-110" : "text-gray-500 hover:text-blue-500"}`}>
+                  <FaMicrophone />
+                </span>
+              </span>
+              <span className=" cursor-pointer mr-3" onClick={() => setToggleAiGenieSearchBy(!toggleAiGenieSearchBy)}>{toggleAiGenieSearchBy ? <FaCaretUp /> : <FaCaretDown />}</span>
+            </div>
 
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.CustomerSubtype) ? fieldOptions.CustomerSubtype : []}
-                      label={getLabel("CustomerSubType", "Customer Subtype")}
-                      value={dependent.CustomerSubType.name}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-
-                        const selectedObj = fieldOptions.CustomerSubtype.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            CustomerSubType: [selectedObj.Name]
-                          };
-                          setFilters(updatedFilters);
-
-                          setDependent(prev => ({
-                            ...prev,
-                            CustomerSubType: { id: selectedObj._id, name: selectedObj.Name }
-                          }));
-                          handleSelectChange("CustomerSubType", selectedObj.Name, updatedFilters)
-                        }
-                      }}
-                    />
-
-
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.City) ? fieldOptions.City : []}
-                      label={getLabel("City", "City")}
-                      value={dependent.City.id}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-                        const selectedObj = fieldOptions.City.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            City: [selectedObj.Name],
-                            Location: []
-                          };
-                          setFilters(updatedFilters);
-
-                          setDependent(prev => ({
-                            ...prev,
-                            City: { id: selectedObj._id, name: selectedObj.Name },
-                            Location: { id: "", name: "" },
-                          }));
-                          handleSelectChange("City", selectedObj.Name, updatedFilters)
-                        }
-                      }}
-                    />
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.Location) ? fieldOptions.Location : []}
-                      label={getLabel("Location", "Location")}
-                      value={dependent.Location.id}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-                        const selectedObj = fieldOptions.Location.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            Location: [selectedObj.Name]
-                          };
-                          setFilters(updatedFilters);
-
-                          setDependent(prev => ({
-                            ...prev,
-                            Location: { id: selectedObj._id, name: selectedObj.Name },
-                          }));
-                          handleSelectChange("Location", selectedObj.Name, updatedFilters)
-                        }
-                      }}
-                      isSearchable
-                    />
-                    <ObjectSelect
-                      options={Array.isArray(fieldOptions?.SubLocation) ? fieldOptions.SubLocation : []}
-                      label={getLabel("SubLocation", "Sub Location")}
-                      value={dependent.SubLocation.id}
-                      getLabel={(item) => item?.Name || ""}
-                      getId={(item) => item?._id || ""}
-                      onChange={(selectedId) => {
-                        const selectedObj = fieldOptions.SubLocation.find((i) => i._id === selectedId);
-                        if (selectedObj) {
-                          const updatedFilters = {
-                            ...filters,
-                            SubLocation: [selectedObj.Name]
-                          };
-                          setFilters(updatedFilters);
-                          setDependent(prev => ({
-                            ...prev,
-                            SubLocation: { id: selectedObj._id, name: selectedObj.Name },
-                          }));
-                          handleSelectChange("SubLocation", selectedObj.Name, updatedFilters)
-                        }
-                      }}
-                      isSearchable
-                    />
-
-                    <SingleSelect options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} value={filters.ReferenceId[0]} label={getLabel("ReferenceId", "Reference Id")} onChange={(v) => handleSelectChange("ReferenceId", v)} isSearchable />
-                    {/*   <SingleSelect options={Array.isArray(fieldOptions?.MinPrice) ? fieldOptions.MinPrice : []} value={filters.MinPrice[0]} label={getLabel("MinPrice", "Min Price")} onChange={(v) => handleSelectChange("MinPrice", v)} isSearchable />
-                    <SingleSelect options={Array.isArray(fieldOptions?.MaxPrice) ? fieldOptions.MaxPrice : []} value={filters.MaxPrice[0]} label={getLabel("MaxPrice", "Max Price")} onChange={(v) => handleSelectChange("MaxPrice", v)} isSearchable /> */}
-
-                    <SingleSelect options={Array.isArray(fieldOptions?.LeadType) ? fieldOptions.LeadType : []} value={filters.LeadType[0]} label={getLabel("LeadType", "Lead Type")} onChange={(v) => handleSelectChange("LeadType", v)} isSearchable />
-                    <SingleSelect options={Array.isArray(fieldOptions?.LeadTemperature) ? fieldOptions.LeadTemperature : []} value={filters.LeadTemperature[0]} label={getLabel("LeadTemperature", "Lead Status")} onChange={(v) => handleSelectChange("LeadTemperature", v)} isSearchable />
-                    {/*   <SingleSelect options={Array.isArray(fieldOptions?.Price) ? fieldOptions.Price : []} value={filters.Price[0]} label={getLabel("Price", "Price")} onChange={(v) => handleSelectChange("Price", v)} isSearchable /> */}
-                    {/* <SingleSelect options={Array.isArray(fieldOptions?.isFavourite) ? fieldOptions.isFavourite : []} value={filters.isFavourite[0]} label="favroutie" onChange={(v) => handleSelectChange("isFavourite", v)}  /> */}
-
-                    <SingleSelect options={Array.isArray(fieldOptions?.User) ? fieldOptions.User : []} value={filters.User[0]} label="User" onChange={(v) => handleSelectChange("User", v)} isSearchable />
-
-                    <SingleSelect options={["10", "25", "50", "100"]} value={filters.Limit[0]} label="Limit" onChange={(v) => {
-
-                      handleSelectChange("Limit", v)
-                    }} />
-                    <DateSelector label="From" value={filters.StartDate[0]} onChange={(v) => handleSelectChange("StartDate", v)} />
-                    <DateSelector label="To" value={filters.EndDate[0]} onChange={(v) => handleSelectChange("EndDate", v)} />
-                    <PriceRange
-                      filters={filters}
-                      handleSelectChange={handleSelectChange}
-                    />
-                    <div>
-                      <input
-                        id="favouriteFilter"
-                        type="checkbox"
-                        className="hidden"
-                        checked={filters.isFavourite}
-                        onChange={(e) =>
-                          handleSelectChange("isFavourite", e.target.checked)
-                        }
-                      />
-
-                      <label
-                        htmlFor="favouriteFilter"
-                        className={`
-    inline-flex items-center justify-center
-    h-10 px-4 rounded-md border
-    text-sm font-medium cursor-pointer
-    transition-colors duration-200 gap-2
-    ${filters.isFavourite
-                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                            : "bg-white text-gray-700 border-gray-300"
-                          }
-  `}
+            <div className={` mt-5 overflow-hidden transition-all duration-300 ${toggleAiGenieSearchBy ? " h-[150px]" : " h-0"}`}>
+              <div className="flex flex-wrap gap-2 px-3 mb-5">
+                {SEARCH_FIELDS.filter(f => !filters.SearchIn.includes(f)).map((field) => (
+                  <button
+                    key={field}
+                    type="button"
+                    className="px-2 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition"
+                    onClick={() => setFilters(prev => ({ ...prev, SearchIn: [...prev.SearchIn, field] }))}
+                  >
+                    {field.toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="">
+                {filters.SearchIn.length > 0 && <h5 className=" text-gray-500 text-sm my-2 mx-2">Selected</h5>}
+                <div className="flex flex-wrap gap-2 px-3">
+                  {filters.SearchIn.map((field) => (
+                    <div key={field} className="group relative flex items-center px-2 py-1 border border-blue-400 rounded-md text-sm bg-blue-100">
+                      {field.toLowerCase()}
+                      <button
+                        className="ml-2 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity text-sm text-[var(--color-primary)]"
+                        onClick={() => setFilters(prev => ({ ...prev, SearchIn: prev.SearchIn.filter(f => f !== field) }))}
                       >
-                        {filters.isFavourite ? <MdFavorite /> : <MdFavoriteBorder />}
-                        Favourite
-                      </label>
+                        <IoMdClose />
+                      </button>
                     </div>
-
-                  </div>
-
-
+                  ))}
                 </div>
-
-                {/* Keyword Search */}
-                <form className="flex  max-lg:flex-col justify-between items-center gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (keywordInput.trim() === "")
-                      return
-                    setAiLoading(true);
-                    setCurrentStep(STEPS.SEARCH)
-                    aiGenieSearch();
-                  }}
-                >
-
-                  <div className=" w-[80%] ">
-                    <div>
-                      <div className=" flex justify-between">
-                        <label className="flex gap-1 mb-2 items-center text-sm font-bold text-[var(--color-secondary-darker)] ml-1">{aiLoading ? <span>
-                          <BounceLoader
-                            loading={true}
-                            color="var(--color-primary)"
-                            size={25}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
-                          /></span> : <span><img className=" w-[25px] " src="/aiBot.png" /></span>
-                        }
-                          <div className="">AI Genie</div>
-
-
-                        </label>
-                        {/*  {isListening && (
-                          <div className="flex items-center gap-2.5 mt-2 ml-1 px-3 py-2 rounded-xl bg-red-50 border border-red-100 w-fit">
-                           
-                            <div className="flex items-center gap-[3px]">
-                              {[0, 1, 2, 3].map((i) => (
-                                <span
-                                  key={i}
-                                  className="block w-[3px] rounded-full bg-red-500"
-                                  style={{
-                                    animation: `soundBar 0.8s ease-in-out infinite alternate`,
-                                    animationDelay: `${i * 0.15}s`,
-                                    height: "14px",
-                                  }}
-                                />
-                              ))}
-                            </div>
-
-                            <p className="text-red-500 text-xs font-semibold tracking-wide">
-                              Listening…
-                            </p>
-
-                           
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                            </span>
-
-                            <style>{`
-      @keyframes soundBar {
-        from { transform: scaleY(0.3); opacity: 0.5; }
-        to   { transform: scaleY(1);   opacity: 1;   }
-      }
-    `}</style>
-                          </div>
-                        )} */}
-                      </div>
-                      <p className={`text-gray-400 font-light text-xs ml-2 mb-2  flex items-center gap-[1px] `}>
-                        <span
-                          className={`transition-opacity duration-300 `}
-                        >
-                          {currentStep}
-                        </span>
-
-                        {aiLoading && <span className="translate-y-[2px]">
-                          <BeatLoader size={2} color="gray" />
-                        </span>}
-
-                      </p>
-                      <div className="">
-
-                        <div className=" flex justify-between items-center border border-gray-300 rounded-md w-full">
-                          <input
-                            type="text"
-                            placeholder="What you want to search?"
-                            className="outline-none w-full px-3 py-2 "
-                            value={keywordInput}
-                            onChange={(e) => setKeywordInput(e.target.value)}
-                          />
-                          <span
-                            className={`relative mr-3 cursor-pointer flex items-center justify-center`}
-                            onClick={() => {
-                              playSound();      // 🔊 sound plays
-                              startListening(); // 🎤 mic starts
-                            }}
-                          >
-                            {/* Pulse Ring */}
-                            {isListening && (
-                              <span className="absolute inline-flex h-8 w-8 rounded-full bg-red-400 opacity-75 animate-ping"></span>
-                            )}
-
-                            {/* Mic Icon */}
-                            <span
-                              className={`relative z-10 p-2 rounded-full transition-all duration-300 
-    ${isListening ? "bg-red-500 text-white scale-110" : "text-gray-500 hover:text-blue-500"}
-  `}
-                            >
-                              <FaMicrophone />
-                            </span>
-                          </span>
-                          <span className=" cursor-pointer mr-3" onClick={() => setToggleAiGenieSearchBy(!toggleAiGenieSearchBy)}>{toggleAiGenieSearchBy ? <FaCaretUp /> : <FaCaretDown />}</span>
-                        </div>
-
-                        <div className={` mt-5 overflow-hidden transition-all duration-300 ${toggleAiGenieSearchBy ? " h-[150px]" : " h-0"}`}>
-                          {/* Unselected Fields */}
-                          <div className="flex flex-wrap gap-2 px-3 mb-5">
-                            {SEARCH_FIELDS.filter(f => !filters.SearchIn.includes(f)).map((field) => (
-                              <button
-                                key={field}
-                                type="button"
-                                className="px-2 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition"
-                                onClick={() =>
-                                  setFilters(prev => ({
-                                    ...prev,
-                                    SearchIn: [...prev.SearchIn, field],
-                                  }))
-                                }
-                              >
-                                {field.toLowerCase()}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Selected Fields */}
-                          <div className="">
-                            {filters.SearchIn.length > 0 && <h5 className=" text-gray-500 text-sm my-2 mx-2">Selected</h5>}
-                            <div className="flex flex-wrap gap-2 px-3">
-
-                              {filters.SearchIn.map((field) => (
-                                <div
-                                  key={field}
-                                  className="group relative flex items-center px-2 py-1 border border-blue-400 rounded-md text-sm bg-blue-100"
-                                >
-                                  {field.toLowerCase()}
-                                  <button
-                                    className="ml-2 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity text-sm text-[var(--color-primary)]"
-                                    onClick={() =>
-                                      setFilters(prev => ({
-                                        ...prev,
-                                        SearchIn: prev.SearchIn.filter(f => f !== field),
-                                      }))
-                                    }
-                                  >
-                                    <IoMdClose />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  <div className={` flex justify-center items-center w-[30%] transition duration-300  ${toggleAiGenieSearchBy ? " lg:-mt-32" : " lg:mt-5"} `}>
-                    {!aiLoading ? <button type="submit" className="border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
-                      Explore
-                    </button> : <button type="button" className="flex gap-1 justify-center items-center border border-[var(--color-primary)]  bg-[var(--color-primary)] text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
-                      Exploring <HashLoader
-                        loading={true}
-                        color="white"
-                        size={12}
-                        aria-label="Loading Spinner"
-                        data-testid="loader"
-                      />
-                    </button>}
-
-                    <button type="reset" onClick={clearFilter} className="text-red-500 cursor-pointer hover:underline text-sm px-5 py-2  rounded-md ml-3">
-                      Clear Search
-                    </button>
-                  </div>
-                </form>
-
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={` flex justify-center items-center w-[30%] transition duration-300  ${toggleAiGenieSearchBy ? " lg:-mt-32" : " lg:mt-5"} `}>
+        {!aiLoading ? (
+          <button type="submit" className="border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
+            Explore
+          </button>
+        ) : (
+          <button type="button" className="flex gap-1 justify-center items-center border border-[var(--color-primary)]  bg-[var(--color-primary)] text-white transition-all duration-300 cursor-pointer px-3 py-2  rounded-md">
+            Exploring <HashLoader loading={true} color="white" size={12} aria-label="Loading Spinner" data-testid="loader" />
+          </button>
+        )}
+        <button type="reset" onClick={clearFilter} className="text-red-500 cursor-pointer hover:underline text-sm px-5 py-2  rounded-md ml-3">
+          Clear Search
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
             {/*  <AgentSelector
   agents={agents}
   keywordInput={keywordInput}
@@ -4206,8 +4248,10 @@ export default function Customer() {
                                         </Button>
                                         <Button
                                           onClick={() => {
-                                            router.push(`/customer/${item._id}`)
+                                            // router.push(`/customer/${item._id}`)
+                                            handleViewClick(item._id)
                                           }}
+
                                           sx={{
                                             backgroundColor: "#E8F5E9",
                                             color: "var(--color-primary)",

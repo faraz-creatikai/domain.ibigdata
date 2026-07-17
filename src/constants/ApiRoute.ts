@@ -30,6 +30,7 @@ export const API_ROUTES = {
     LOCATION_STATS:`${BASE_URL}/customer/dashboard/customer-location-stats`,
     RADAR_CHART_STATS:`${BASE_URL}/customer/dashboard/radar-chart-stats`,
     GET_ALL: `${BASE_URL}/customer`,
+    GET_CUSTOMER_FIELDS_VALUES:`${BASE_URL}/customer/get-customer-fields-values`,
     GET_ALL_TOTAL: `${BASE_URL}/customer/all`,
     GET_CUSTOMER_COUNT:`${BASE_URL}/customer/count`,
     GET_FAVOURITES_CUSTOMER: `${BASE_URL}/customer/favouriteS/all`,

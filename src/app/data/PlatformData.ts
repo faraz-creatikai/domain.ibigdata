@@ -1,3 +1,3 @@
 
 
-export const sidebarLogoPath="/logo.webp"
+export const sidebarLogoPath="/domain-logo.png"
