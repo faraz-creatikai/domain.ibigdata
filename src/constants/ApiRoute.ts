@@ -393,7 +393,9 @@ export const API_ROUTES = {
       ADD: `${BASE_URL}/v1/templates`,
       UPDATE: (id: string) => `${BASE_URL}/v1/templates/${id}`,
       DELETE: (id: string) => `${BASE_URL}/v1/templates/${id}`,
-      MAILALL: `${BASE_URL}/v1/messages/email`
+      MAILALL: `${BASE_URL}/v1/messages/email`,
+      FILEUPLOAD:`${BASE_URL}/v1/messages/uploads/file`,
+      SEND_EMAIL_VIA_AI:`${BASE_URL}/v1/messages/send-email-via-ai`
     },
     WHATSAPP: {
       GET_ALL: `${BASE_URL}/v1/templates?type=whatsapp`,
