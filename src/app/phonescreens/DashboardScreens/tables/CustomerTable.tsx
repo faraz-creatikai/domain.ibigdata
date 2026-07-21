@@ -157,6 +157,15 @@ export default function CustomerTable<T extends Record<string, any>>({
                                         >
                                             {viewLeadData?.[item.key] ?? ""}
                                         </span>
+                                    ) : item.label === "URL" ? (
+                                        <a
+                                           href={viewLeadData?.[item.key]??"#"}
+                                           target="_blank"
+                                            className="text-[var(--color-primary)] cursor-pointer underline text-sm text-right max-w-[60%]"
+                                           
+                                        >
+                                            {viewLeadData?.[item.key] ?? ""}
+                                        </a>
                                     ) : item.label === "AssignTo" ? (
                                         <span className="font-semibold text-gray-700 dark:text-[var(--color-txtlight)] text-sm">
                                             {Array.isArray(viewLeadData?.[item.key]) && viewLeadData[item.key].length > 0

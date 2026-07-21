@@ -1661,6 +1661,9 @@ export default function Customer() {
     {
       key: "Adderess", label: "Address"
     },
+        {
+      key: "URL", label: "URL"
+    },
     {
       key: "ContactNumber", label: "Contact No"
     },
