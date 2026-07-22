@@ -95,6 +95,7 @@ import SendDirectWhatsappDialog from "../component/popups/SendDirectWhatsappDial
 import CustomerViewDialog from "../component/popups/CustomerviewDialog";
 import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 import EmailCampaignAgentWorkspace from "../component/aiagents/EmailCampaignAgentWorkspace";
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE, isoToFlagEmoji } from "../utils/countryCodes";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -815,7 +816,8 @@ export default function Customer() {
       ClientId: item.ClientId,
       CustomerYear: item.CustomerYear,
       Facillities: item.Facillities,
-      ContactNumber: item.ContactNumber?.slice(0, 10),
+      ContactNumber: item.ContactNumber,
+      CountryCode: item.CountryCode,
       ReferenceId: item.ReferenceId,
       AssignTo: item.AssignTo ?? [],
       isFavourite: item.isFavourite,
@@ -1661,7 +1663,7 @@ export default function Customer() {
     {
       key: "Adderess", label: "Address"
     },
-        {
+    {
       key: "URL", label: "URL"
     },
     {
@@ -4118,17 +4120,29 @@ export default function Customer() {
                                       cellValue = item.SubLocation || "-";
                                       break;
                                     case "contact":
+                                      const countryInfo =
+                                        COUNTRY_CODES.find((c) => c.code === (item.CountryCode || DEFAULT_COUNTRY_CODE)) ||
+                                        COUNTRY_CODES.find((c) => c.code === DEFAULT_COUNTRY_CODE)!;
+                                      const fullDialNumber = `${item.CountryCode || DEFAULT_COUNTRY_CODE}${item.ContactNumber}`;
+
                                       cellValue = (
                                         <>
                                           {item.ContactNumber && (
-                                            <div className="flex flex-col items-start gap-1">
-                                              <span className="font-medium text-gray-800 cursor-pointer" onClick={() => handleAgentCalling(item._id)}>
+                                            <div className="flex flex-col items-start justify-center  gap-1">
+                                              <span
+                                                className="font-medium text-gray-800 cursor-pointer flex items-center w-full justify-center gap-1"
+                                                onClick={() => handleAgentCalling(item._id)}
+                                              >
+                                                <span className=" mb-[2px]" style={{ fontFamily: "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif" }}>
+                                                  {isoToFlagEmoji(countryInfo.iso2)}
+                                                </span>
+                                                <span className="text-gray-500 text-xs mb-[2px]">+{countryInfo.code}</span>
                                                 {item.ContactNumber}
                                               </span>
-                                              <div className="flex items-center gap-1">
+                                              <div className="flex items-center w-full justify-center gap-1">
                                                 <Button
                                                   component="a"
-                                                  onClick={() => handleCall({ customerNumber: item.ContactNumber })}
+                                                  onClick={() => handleCall({ customerNumber: fullDialNumber })}
                                                   sx={{
                                                     backgroundColor: "#E8F5E9",
                                                     color: "var(--color-primary)",
@@ -4188,7 +4202,7 @@ export default function Customer() {
                                                     minWidth: "100px",
                                                     height: "24px",
                                                     borderRadius: "8px",
-                                                    margin: "2px"
+                                                    margin: "2px auto"
                                                   }}
                                                 >
                                                   <FaEye size={12} />

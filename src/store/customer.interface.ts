@@ -73,6 +73,7 @@ export interface customerGetDataInterface {
   isChecked?: boolean;
   LeadTemperature?: string;
   ContactNumber: string;
+  CountryCode?: string;
   AssignTo: string[];
   Date: string;
   CustomerType: string;
