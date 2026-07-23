@@ -1,4 +1,4 @@
-export const BASE_URL = "https://apidomain.ibigdata.in/api";
+export const BASE_URL = "http://localhost:5000/api";
 //https://live-project-backend-1.onrender.com
 //https://propertyapi.aileadgenie.cloud/api
 //https://apidomain.ibigdata.in

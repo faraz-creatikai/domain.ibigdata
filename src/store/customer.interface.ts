@@ -152,10 +152,9 @@ export interface CustomerAdvInterface {
 export interface customerAssignInterface {
   assignToId: string | string[];
   customerIds?: string[];
-  campaign?: string | string[];
-  assignMode?: "selected" | "campaign" | "all";
   action?: "assign" | "remove";
 }
+
 
 export interface contactAssignInterface {
   contactIds: string[];

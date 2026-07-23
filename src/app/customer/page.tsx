@@ -96,6 +96,7 @@ import CustomerViewDialog from "../component/popups/CustomerviewDialog";
 import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 import EmailCampaignAgentWorkspace from "../component/aiagents/EmailCampaignAgentWorkspace";
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE, isoToFlagEmoji } from "../utils/countryCodes";
+import AssignCustomersPopup from "../component/popups/AssignCustomerPopup";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -160,7 +161,6 @@ export default function Customer() {
   /*REST OF YOUR STATES (UNCHANGED) */
   const [toggleSearchDropdown, setToggleSearchDropdown] = useState(false);
   const [currentTablePage, setCurrentTablePage] = useState(1);
-  const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isMailAllOpen, setIsMailAllOpen] = useState(false);
   const [isWhatsappAllOpen, setIsWhatsappAllOpen] = useState(false);
   const [isSendPropertiesOpen, setIsSendPropertiesOpen] = useState(false);
@@ -216,6 +216,17 @@ export default function Customer() {
   const [isFetchingWhatsappTemplates, setIsFetchingWhatsappTemplates] = useState(false);
   const [isFetchingMailTemplates, setIsFetchingMailTemplates] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+const [assignTargetIds, setAssignTargetIds] = useState<string[]>([]);
+const [assignTargetLabel, setAssignTargetLabel] = useState('');
+
+// after user selects a city_admin/user from your existing users list UI:
+const openAssignFor = (userIds: string[], label: string) => {
+  setAssignTargetIds(userIds);
+  setAssignTargetLabel(label);
+  setIsAssignOpen(true);
+};
 
 
   // Derives from your existing users array — assumes users have a `role` field
@@ -3088,6 +3099,18 @@ export default function Customer() {
           </ListPopup>
         )}
 
+{isAssignOpen && (
+  <AssignCustomersPopup
+    isOpen={isAssignOpen}
+    onClose={() => setIsAssignOpen(false)}
+    users={users}
+    isFetchingUsers={isFetchingUsers}
+    fetchUsers={fetchUsers}
+    initialSelectedCustomerIds={selectedCustomers} // optional: pre-check table selection
+    onAssigned={getCustomers}
+  />
+)}
+
 
         {/* ---------- TABLE START ---------- */}
 
@@ -3877,11 +3900,10 @@ export default function Customer() {
                     <span className="relative">Select All</span>
                   </label>
                   <button type="button" className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
-                    if (selectedCustomers.length <= 0) toast.error("please select atleast 1 customer")
-                    else {
+                 
                       setIsAssignOpen(true);
                       fetchUsers()
-                    } 0
+               
                   }}><div className="absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300"></div>
                     <span className="relative">Asign To</span></button>
                   <button type="button" className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
