@@ -218,15 +218,15 @@ export default function Customer() {
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
 
   const [isAssignOpen, setIsAssignOpen] = useState(false);
-const [assignTargetIds, setAssignTargetIds] = useState<string[]>([]);
-const [assignTargetLabel, setAssignTargetLabel] = useState('');
+  const [assignTargetIds, setAssignTargetIds] = useState<string[]>([]);
+  const [assignTargetLabel, setAssignTargetLabel] = useState('');
 
-// after user selects a city_admin/user from your existing users list UI:
-const openAssignFor = (userIds: string[], label: string) => {
-  setAssignTargetIds(userIds);
-  setAssignTargetLabel(label);
-  setIsAssignOpen(true);
-};
+  // after user selects a city_admin/user from your existing users list UI:
+  const openAssignFor = (userIds: string[], label: string) => {
+    setAssignTargetIds(userIds);
+    setAssignTargetLabel(label);
+    setIsAssignOpen(true);
+  };
 
 
   // Derives from your existing users array — assumes users have a `role` field
@@ -3099,17 +3099,17 @@ const openAssignFor = (userIds: string[], label: string) => {
           </ListPopup>
         )}
 
-{isAssignOpen && (
-  <AssignCustomersPopup
-    isOpen={isAssignOpen}
-    onClose={() => setIsAssignOpen(false)}
-    users={users}
-    isFetchingUsers={isFetchingUsers}
-    fetchUsers={fetchUsers}
-    initialSelectedCustomerIds={selectedCustomers} // optional: pre-check table selection
-    onAssigned={getCustomers}
-  />
-)}
+        {isAssignOpen && (
+          <AssignCustomersPopup
+            isOpen={isAssignOpen}
+            onClose={() => setIsAssignOpen(false)}
+            users={users}
+            isFetchingUsers={isFetchingUsers}
+            fetchUsers={fetchUsers}
+            initialSelectedCustomerIds={selectedCustomers} // optional: pre-check table selection
+            onAssigned={getCustomers}
+          />
+        )}
 
 
         {/* ---------- TABLE START ---------- */}
@@ -3899,13 +3899,15 @@ const openAssignFor = (userIds: string[], label: string) => {
                     <div className="absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300"></div>
                     <span className="relative">Select All</span>
                   </label>
-                  <button type="button" className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
-                 
+                  {
+                    admin?.role !== "user" && <button type="button" className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
+
                       setIsAssignOpen(true);
                       fetchUsers()
-               
-                  }}><div className="absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300"></div>
-                    <span className="relative">Asign To</span></button>
+
+                    }}><div className="absolute top-0 left-0 z-0 h-full bg-[var(--color-primary)] w-0 group-hover:w-full transition-all duration-300"></div>
+                      <span className="relative">Asign To</span></button>
+                  }
                   <button type="button" className="relative overflow-hidden py-[2px] group hover:bg-[var(--color-primary-lighter)] hover:text-white text-[var(--color-primary)] bg-[var(--color-primary-lighter)] rounded-tr-sm rounded-br-sm border-l-[3px] px-2 border-l-[var(--color-primary)] cursor-pointer" onClick={() => {
                     if (selectedCustomers.length <= 0) toast.error("please select atleast 1 customer")
                     else {
@@ -3964,7 +3966,7 @@ const openAssignFor = (userIds: string[], label: string) => {
       [scrollbar-width:auto] [scrollbar-color:#d1d5db_#f3f4f6]"
               >
                 <table className="table-auto min-w-full border-separate border-spacing-0 text-sm">
-                  <thead className="bg-[var(--color-primary)] text-white sticky top-0 z-30">
+                  <thead className="bg-[var(--color-primary)] text-white sticky top-0 " style={{ zIndex: 1 }}>
                     <tr>
 
                       {/* SELECT ALL CHECKBOX COLUMN — pinned left. Fixed width (w-12) matches the row checkbox
@@ -4051,7 +4053,7 @@ const openAssignFor = (userIds: string[], label: string) => {
                             <tr key={item._id} className={`${rowBg} hover:bg-[#f7f6f3] transition-colors duration-150`}>
 
                               {/* ROW CHECKBOX — pinned left. Same fixed w-12 as the header cell above it. */}
-                              <td className={`px-3 py-3 sticky left-0 z-10 align-top w-12 min-w-[3rem] border-b border-r border-gray-200 ${rowBg}`}>
+                              <td className={`px-3 py-3 sticky left-0 align-top w-12 min-w-[3rem] border-b border-r border-gray-200 ${rowBg}`}>
                                 <div className="flex items-center justify-center pt-0.5">
                                   <input
                                     type="checkbox"
@@ -4314,8 +4316,8 @@ const openAssignFor = (userIds: string[], label: string) => {
                                   <td
                                     key={col.key}
                                     className={`px-4 py-3 align-top border-b border-r border-gray-200 text-gray-700 ${layoutClass}
-                          ${col.key === "sno" ? `sticky left-12 z-10 shadow-[6px_0_6px_-6px_rgba(0,0,0,0.12)] ${rowBg}` : ""}
-                        `}
+                                    ${col.key === "sno" ? `sticky left-12  shadow-[6px_0_6px_-6px_rgba(0,0,0,0.12)] ${rowBg}` : ""}
+                                  `}
                                   >
                                     {cellValue}
                                   </td>
@@ -4326,7 +4328,7 @@ const openAssignFor = (userIds: string[], label: string) => {
                       at the frozen edge instead of stacking a border on top of the shadow.
                       Gated on the same "actions" visible flag as the header cell above. */}
                               {(columns.find((col) => col.key === "actions")?.visible !== false) && (
-                                <td className={`px-3 py-3 align-top sticky right-0 z-10 min-w-[130px] border-b border-gray-200 shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)] ${rowBg}`}>
+                                <td className={`px-3 py-3 align-top sticky right-0 min-w-[130px] border-b border-gray-200 shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.12)] ${rowBg}`}>
                                   <div className="grid grid-cols-2 gap-2 items-center">
                                     <Button
                                       sx={{ backgroundColor: "#E8F5E9", color: "var(--color-primary)", minWidth: "32px", height: "32px", borderRadius: "8px" }}
