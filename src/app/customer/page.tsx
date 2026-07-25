@@ -3044,7 +3044,7 @@ export default function Customer() {
                 </Button>
 
               </div>
-              <div className=" flex justify-between w-full">
+              <div className=" flex justify-between w-full mt-2">
                 <div />
                 <Button
                   onClick={() => {
