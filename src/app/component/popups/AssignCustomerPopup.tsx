@@ -11,6 +11,7 @@ import { getsubLocationByCityLoc } from '@/store/masters/sublocation/sublocation
 import CustomDropdown, { DropdownOption } from '../CustomDropdown';
 import { assignCustomer } from '@/store/customer';
 import toast from 'react-hot-toast';
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE, isoToFlagEmoji } from '@/app/utils/countryCodes';
 
 interface RecipientItem {
   _id: string;
@@ -36,7 +37,7 @@ export interface AssignCustomersPopupProps {
   onAssigned?: () => void; // e.g. getCustomers()
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 100;
 
 const SearchIcon = () => (
   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,9 +82,8 @@ const RoleBadge = ({ role }: { role?: string }) => {
   const isCityAdmin = role === 'city_admin';
   return (
     <span
-      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
-        isCityAdmin ? 'bg-indigo-50 text-indigo-700' : 'bg-teal-50 text-teal-700'
-      }`}
+      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${isCityAdmin ? 'bg-indigo-50 text-indigo-700' : 'bg-teal-50 text-teal-700'
+        }`}
     >
       {isCityAdmin ? 'City Admin' : 'User'}
     </span>
@@ -370,26 +370,29 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
 
   if (!isOpen) return null;
 
+  const title =
+    step === 1
+      ? action === 'remove' ? 'Remove From Whom?' : 'Assign To Whom?'
+      : action === 'remove' ? 'Remove Which Customers?' : 'Assign Which Customers?';
+
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-[80] flex items-center justify-center p-0 sm:p-6"
+      style={{ background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-2xl bg-white flex flex-col overflow-hidden"
+        className="w-full h-full sm:w-[90vw] sm:h-[92vh] bg-white flex flex-col overflow-hidden rounded-none sm:rounded-2xl"
         style={{
-          borderRadius: '20px 20px 0 0',
-          maxHeight: '96dvh',
-          height: '96dvh',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.12)',
-          animation: 'sheet-up 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+          maxWidth: '1400px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+          animation: 'modal-pop 0.2s cubic-bezier(0.34,1.56,0.64,1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* ── Header: title + step dots + assign/remove toggle + close, all in one row ── */}
+        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             {step === 2 && (
               <button
                 onClick={() => setStep(1)}
@@ -399,15 +402,15 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
               </button>
             )}
             <div className="min-w-0">
-              <h3 className="text-[16px] font-bold text-gray-900 leading-tight tracking-tight">
-                {step === 1
-                  ? action === 'remove'
-                    ? 'Remove From Whom?'
-                    : 'Assign To Whom?'
-                  : action === 'remove'
-                  ? 'Remove Which Customers?'
-                  : 'Assign Which Customers?'}
-              </h3>
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-[17px] font-bold text-gray-900 leading-tight tracking-tight truncate">
+                  {title}
+                </h3>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className={`h-1.5 w-5 rounded-full transition-colors ${step >= 1 ? 'bg-[var(--color-primary)]' : 'bg-gray-200'}`} />
+                  <span className={`h-1.5 w-5 rounded-full transition-colors ${step >= 2 ? 'bg-[var(--color-primary)]' : 'bg-gray-200'}`} />
+                </div>
+              </div>
               {step === 2 && recipientLabel && (
                 <p className="text-[12px] text-gray-400 mt-0.5 truncate">
                   {action === 'remove' ? 'Removing from' : 'Assigning to'}{' '}
@@ -416,38 +419,29 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0"
-          >
-            <XIcon />
-          </button>
-        </div>
 
-        {/* ── Step indicator ── */}
-        <div className="flex items-center gap-2 px-5 pb-3 flex-shrink-0">
-          <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 1 ? 'bg-[var(--color-primary)]' : 'bg-gray-200'}`} />
-          <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 2 ? 'bg-[var(--color-primary)]' : 'bg-gray-200'}`} />
-        </div>
-
-        {/* ── Assign / Remove toggle (applies globally) ── */}
-        <div className="px-5 pb-3 flex-shrink-0">
-          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg text-sm font-medium w-fit">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex gap-1 p-1 bg-gray-100 rounded-lg text-sm font-medium">
+              <button
+                onClick={() => setAction('assign')}
+                className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${action === 'assign' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+              >
+                Assign
+              </button>
+              <button
+                onClick={() => setAction('remove')}
+                className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${action === 'remove' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+              >
+                Remove
+              </button>
+            </div>
             <button
-              onClick={() => setAction('assign')}
-              className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${
-                action === 'assign' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-gray-400 hover:text-gray-600'
-              }`}
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
-              Assign
-            </button>
-            <button
-              onClick={() => setAction('remove')}
-              className={`px-4 py-1.5 rounded-md cursor-pointer transition-all ${
-                action === 'remove' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Remove
+              <XIcon />
             </button>
           </div>
         </div>
@@ -455,8 +449,8 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
         {/* ══════════════ STEP 1: RECIPIENTS ══════════════ */}
         {step === 1 && (
           <>
-            <div className="px-5 pb-2 flex-shrink-0">
-              <div className="relative">
+            <div className="px-6 pt-4 pb-3 flex-shrink-0 flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <SearchIcon />
                 </span>
@@ -468,36 +462,39 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
                   className="w-full pl-9 pr-4 py-2.5 text-[13px] rounded-xl border outline-none transition-all bg-gray-50 border-gray-200 focus:bg-white focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 text-gray-800"
                 />
               </div>
-            </div>
-
-            {selectedRecipients.size > 0 && (
-              <div className="px-5 pb-2 flex-shrink-0">
-                <span className="text-[11px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-lighter)] px-2.5 py-1 rounded-full">
+              {selectedRecipients.size > 0 && (
+                <span className="text-[11px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary-lighter)] px-2.5 py-1.5 rounded-full flex-shrink-0 whitespace-nowrap">
                   {selectedRecipients.size} selected
                 </span>
-              </div>
-            )}
+              )}
+              <span className="ml-auto text-[11px] font-medium text-gray-400 flex-shrink-0 whitespace-nowrap">
+                {filteredRecipients.length} available
+              </span>
+            </div>
 
-            <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
+            <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
               {isFetchingUsers ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="flex flex-col items-center justify-center h-full gap-3">
                   <Spinner className="w-7 h-7 text-[var(--color-primary-light)] border-t-[var(--color-primary)]" />
                   <p className="text-[13px] text-gray-400">Loading recipients…</p>
                 </div>
               ) : filteredRecipients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                <div className="flex flex-col items-center justify-center h-full gap-2">
                   <p className="text-[13px] text-gray-400">No matching city admins or users found.</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                   {filteredRecipients.map((u) => {
                     const isSelected = selectedRecipients.has(u._id);
                     return (
-                      <li
+                      <div
                         key={u._id}
                         onClick={() => toggleRecipient(u._id)}
-                        className="flex items-center cursor-pointer gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50"
-                        style={{ background: isSelected ? '#f0f9ff' : 'transparent' }}
+                        className="flex items-center cursor-pointer gap-3 p-3.5 rounded-xl border transition-colors hover:border-gray-300"
+                        style={{
+                          background: isSelected ? '#f0f9ff' : '#fff',
+                          borderColor: isSelected ? 'var(--color-primary)' : '#e5e7eb',
+                        }}
                       >
                         <CheckboxIcon checked={isSelected} />
                         <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-lighter)] text-[var(--color-primary)] flex items-center justify-center font-bold text-[12px] flex-shrink-0">
@@ -512,15 +509,15 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
                             {[u.email, u.city].filter(Boolean).join(' · ')}
                           </p>
                         </div>
-                      </li>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
 
-            <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 bg-[#fafafa]">
-              <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 border-t border-gray-100 px-6 py-4 bg-[#fafafa]">
+              <div className="flex items-center gap-3 max-w-md ml-auto">
                 <button
                   onClick={onClose}
                   className="flex-1 py-3 rounded-xl cursor-pointer text-[13px] font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors"
@@ -543,8 +540,8 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
         {/* ══════════════ STEP 2: CUSTOMERS ══════════════ */}
         {step === 2 && (
           <>
-            <div className="px-5 pb-2 flex-shrink-0">
-              <div className="relative">
+            <div className="px-6 pt-4 pb-3 flex-shrink-0 flex flex-wrap items-center gap-2 border-b border-gray-100">
+              <div className="relative w-full sm:w-64 flex-shrink-0">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <SearchIcon />
                 </span>
@@ -553,58 +550,42 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search customer name, location, type…"
+                  placeholder="Search customer, location, type…"
                   className="w-full pl-9 pr-4 py-2.5 text-[13px] rounded-xl border outline-none transition-all bg-gray-50 border-gray-200 focus:bg-white focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 text-gray-800"
                 />
               </div>
-            </div>
 
-            <div className="px-5 pb-3 flex-shrink-0">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Filters</span>
+              <div className="w-32"><CustomDropdown options={campaigns} value={filterCampaign?._id ?? null} onChange={(opt) => setFilterCampaign(opt)} placeholder="Campaign" loading={loadingCampaigns} /></div>
+              <div className="w-32"><CustomDropdown options={types} value={filterType?._id ?? null} onChange={(opt) => setFilterType(opt)} placeholder="Type" loading={loadingTypes} disabled={!filterCampaign} /></div>
+              <div className="w-32"><CustomDropdown options={subtypes} value={filterSubType?._id ?? null} onChange={(opt) => setFilterSubType(opt)} placeholder="Sub-type" loading={loadingSubtypes} disabled={!filterType} /></div>
+              <div className="w-32"><CustomDropdown options={citys} value={filterCity?._id ?? null} onChange={(opt) => setFilterCity(opt)} placeholder="City" loading={loadingCity} /></div>
+              <div className="w-32"><CustomDropdown options={locations} value={filterLocation?._id ?? null} onChange={(opt) => setFilterLocation(opt)} placeholder="Location" loading={loadingLocation} disabled={!filterCity} /></div>
+              <div className="w-32"><CustomDropdown options={sublocations} value={filterSubLocation?._id ?? null} onChange={(opt) => setFilterSubLocation(opt)} placeholder="Sub-location" loading={loadingSubLocation} disabled={!filterLocation} /></div>
+
+              <div className="ml-auto flex items-center gap-3 flex-shrink-0">
                 {activeFilterCount > 0 && (
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md transition-colors cursor-pointer text-[var(--color-primary)] bg-[var(--color-primary-lighter)] hover:bg-[var(--color-primary-light)]"
+                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md transition-colors cursor-pointer text-[var(--color-primary)] bg-[var(--color-primary-lighter)] hover:bg-[var(--color-primary-light)] whitespace-nowrap"
                   >
                     Clear All ({activeFilterCount})
                   </button>
                 )}
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <CustomDropdown options={campaigns} value={filterCampaign?._id ?? null} onChange={(opt) => setFilterCampaign(opt)} placeholder="Campaign" loading={loadingCampaigns} />
-                <CustomDropdown options={types} value={filterType?._id ?? null} onChange={(opt) => setFilterType(opt)} placeholder="Type" loading={loadingTypes} disabled={!filterCampaign} />
-                <CustomDropdown options={subtypes} value={filterSubType?._id ?? null} onChange={(opt) => setFilterSubType(opt)} placeholder="Sub-type" loading={loadingSubtypes} disabled={!filterType} />
-                <CustomDropdown options={citys} value={filterCity?._id ?? null} onChange={(opt) => setFilterCity(opt)} placeholder="City" loading={loadingCity} />
-                <CustomDropdown options={locations} value={filterLocation?._id ?? null} onChange={(opt) => setFilterLocation(opt)} placeholder="Location" loading={loadingLocation} disabled={!filterCity} />
-                <CustomDropdown options={sublocations} value={filterSubLocation?._id ?? null} onChange={(opt) => setFilterSubLocation(opt)} placeholder="Sub-location" loading={loadingSubLocation} disabled={!filterLocation} />
+                <span className="text-[11px] font-medium text-gray-400 whitespace-nowrap">
+                  {filtered.length} customer{filtered.length === 1 ? '' : 's'}
+                </span>
               </div>
             </div>
 
-            {!loadingCustomers && filtered.length > 0 && (
-              <div
-                className="flex items-center gap-2.5 px-5 py-2.5 border-t border-b border-gray-100 flex-shrink-0 cursor-pointer transition-colors"
-                style={{ background: someSelected || allSelected ? '#f0f9ff' : '#fafafa' }}
-                onClick={toggleAll}
-              >
-                <CheckboxIcon checked={allSelected} indeterminate={someSelected} />
-                <span className="text-[12px] font-semibold text-gray-700 select-none">
-                  {allSelected ? 'Deselect all customers' : 'Select all customers'}
-                </span>
-                <span className="ml-auto text-[11px] font-medium text-gray-400">{filtered.length} available</span>
-              </div>
-            )}
-
             <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
               {loadingCustomers ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="flex flex-col items-center justify-center h-full gap-3">
                   <Spinner className="w-7 h-7 text-[var(--color-primary-light)] border-t-[var(--color-primary)]" />
                   <p className="text-[13px] text-gray-400">Loading customers…</p>
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                <div className="flex flex-col items-center justify-center h-full gap-2">
                   <p className="text-[13px] text-gray-400">No customers found.</p>
                   {activeFilterCount > 0 && (
                     <button onClick={clearAllFilters} className="text-[12px] font-semibold text-[var(--color-primary)] cursor-pointer">
@@ -613,36 +594,111 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
                   )}
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-50">
-                  {visibleFiltered.map((c) => {
-                    const isSelected = selected.has(c._id);
-                    return (
-                      <li
-                        key={c._id}
-                        onClick={() => toggleOne(c._id)}
-                        className="flex items-center cursor-pointer gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50"
-                        style={{ background: isSelected ? '#f0f9ff' : 'transparent' }}
-                      >
-                        <CheckboxIcon checked={isSelected} />
-                        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-lighter)] text-[var(--color-primary)] flex items-center justify-center font-bold text-[12px] flex-shrink-0">
-                          {c.customerName?.charAt(0).toUpperCase() || 'C'}
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
+                    <tr className="border-b border-gray-100">
+                      <th className="w-11 px-6 py-2.5 text-left">
+                        <div onClick={toggleAll} className="inline-flex cursor-pointer">
+                          <CheckboxIcon checked={allSelected} indeterminate={someSelected} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-gray-800 truncate">{c.customerName || 'Unnamed Customer'}</p>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            {c.Campaign && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">{c.Campaign}</span>}
-                            {c.CustomerType && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{c.CustomerType}</span>}
-                            {(c.Location || c.City) && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 truncate max-w-[140px]">
-                                📍 {c.Location || c.City}
-                              </span>
+                      </th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Name</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Campaign</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Type</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sub Type</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Contact No</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">City</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400 pr-6">Location</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {visibleFiltered.map((c) => {
+                      const isSelected = selected.has(c._id);
+                      const locationLabel = [c.Location, c.City].filter(Boolean).join(', ');
+                      return (
+                        <tr
+                          key={c._id}
+                          onClick={() => toggleOne(c._id)}
+                          className="cursor-pointer transition-colors hover:bg-gray-50"
+                          style={{ background: isSelected ? '#f0f9ff' : 'transparent' }}
+                        >
+                          <td className="px-6 py-3"><CheckboxIcon checked={isSelected} /></td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-lighter)] text-[var(--color-primary)] flex items-center justify-center font-bold text-[11px] flex-shrink-0">
+                                {c.customerName?.charAt(0).toUpperCase() || 'C'}
+                              </div>
+                              <p className="text-[13px] font-semibold text-gray-800 truncate">{c.customerName || 'Unnamed Customer'}</p>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            {c.Campaign ? (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 whitespace-nowrap">{c.Campaign}</span>
+                            ) : (
+                              <span className="text-[12px] text-gray-300">—</span>
                             )}
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          </td>
+                          <td className="px-3 py-3">
+                            {c.CustomerType ? (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 whitespace-nowrap">{c.CustomerType}</span>
+                            ) : (
+                              <span className="text-[12px] text-gray-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {c.CustomerSubType ? (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 whitespace-nowrap">{c.CustomerSubType}</span>
+                            ) : (
+                              <span className="text-[12px] text-gray-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {c.ContactNumber ? (
+                              (() => {
+                                const countryInfo =
+                                  COUNTRY_CODES.find((e) => e.code === (c.CountryCode || DEFAULT_COUNTRY_CODE)) ||
+                                  COUNTRY_CODES.find((e) => e.code === DEFAULT_COUNTRY_CODE)!;
+
+                                return (
+                                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 whitespace-nowrap">
+                                    <span
+                                      className=""
+                                      style={{
+                                        fontFamily:
+                                          "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif",
+                                      }}
+                                    >
+                                      {isoToFlagEmoji(countryInfo.iso2)}
+                                    </span>
+
+                                    <span className="text-gray-500 text-xs mr-1 ">
+                                      +{countryInfo.code}
+                                    </span>
+
+                                    {c.ContactNumber}
+                                  </span>
+                                );
+                              })()
+                            ) : (
+                              <span className="text-[12px] text-gray-300">—</span>
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {c.City ? (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 whitespace-nowrap">{c.City}</span>
+                            ) : (
+                              <span className="text-[12px] text-gray-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 pr-6 text-[12px] text-gray-500 truncate max-w-[240px]">
+                            {locationLabel || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
 
               {hasMore && (
@@ -655,8 +711,8 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
               )}
             </div>
 
-            <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 bg-[#fafafa]">
-              <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 border-t border-gray-100 px-6 py-4 bg-[#fafafa]">
+              <div className="flex items-center gap-3 max-w-md ml-auto">
                 <button
                   onClick={() => setStep(1)}
                   className="flex-1 py-3 rounded-xl cursor-pointer text-[13px] font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors"
@@ -687,9 +743,9 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
       </div>
 
       <style>{`
-        @keyframes sheet-up {
-          from { transform: translateY(24px); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
+        @keyframes modal-pop {
+          from { transform: scale(0.97); opacity: 0; }
+          to   { transform: scale(1);    opacity: 1; }
         }
       `}</style>
     </div>
