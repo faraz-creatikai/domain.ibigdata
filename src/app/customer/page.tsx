@@ -97,6 +97,7 @@ import { getCustomerFields } from "@/store/masters/customerfields/customerfields
 import EmailCampaignAgentWorkspace from "../component/aiagents/EmailCampaignAgentWorkspace";
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE, isoToFlagEmoji } from "../utils/countryCodes";
 import AssignCustomersPopup from "../component/popups/AssignCustomerPopup";
+import VideoProjectWorkspace from "../component/aiagents/VideoProjectWorkspace";
 
 
 interface DeleteAllDialogDataInterface { }
@@ -1997,6 +1998,7 @@ export default function Customer() {
     Script: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335553/img-10_ajsusz.png" alt="Social" className=" object-contain w-10 h-10" />,
     Assistant: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335552/img-8_twulvb.png" alt="Analytics" className=" object-contain w-10 h-10" />,
     Email: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335523/img-7_xjwzbl.png" alt="Followup" className=" object-contain w-10 h-10" />,
+    Video:<img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-3_scja92.png" alt="Recommendation" className=" object-contain w-10 h-10" />,
     default: "AG",
   };
 
@@ -3609,6 +3611,12 @@ export default function Customer() {
                   ) : selectedAgent && selectedAgent.type === "Email" ? (
                     <div className="flex-1 overflow-hidden px-6 py-4">
                       <EmailCampaignAgentWorkspace isOpen={isAIAgentsDialogOpen} />
+                    </div>
+
+                    /* ── VIDEO  ── */
+                  ): selectedAgent && selectedAgent.type === "Video" ? (
+                    <div className="flex-1 overflow-hidden px-6 py-4">
+                      <VideoProjectWorkspace isOpen={isAIAgentsDialogOpen} />
                     </div>
 
                     /* ── ASSISTANT  ── */

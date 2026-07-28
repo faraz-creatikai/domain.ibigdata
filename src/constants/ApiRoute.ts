@@ -453,6 +453,12 @@ export const API_ROUTES = {
     UPDATE: (id: string) => `${BASE_URL}/favourites/${id}`,
     DELETE: (id: string) => `${BASE_URL}/favourites/${id}`,
   },
+  VIDEOPROJECT: {
+
+    ADDPHOTOS: `${BASE_URL}/video-project/photos`,
+    GENERATESCRIPT: `${BASE_URL}/video-project/script`,
+    RENDER: `${BASE_URL}/video-project/render`,
+  },
 
 
   ADMIN: {
