@@ -197,7 +197,7 @@ const ErrorBanner = ({ message, onDismiss }: { message: string; onDismiss: () =>
             <path strokeLinecap="round" strokeWidth={1.5} d="M12 8v4M12 16h.01" />
         </svg>
         <p className="text-[11.5px] flex-1">{message}</p>
-        <button onClick={onDismiss} style={{ color: '#e11d48', cursor:"pointer" }} aria-label="Dismiss error"><CloseIcon /></button>
+        <button onClick={onDismiss} style={{ color: '#e11d48', cursor: "pointer" }} aria-label="Dismiss error"><CloseIcon /></button>
     </div>
 )
 
@@ -330,6 +330,7 @@ const VideoProjectWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     const voiceInputRef = useRef<HTMLInputElement>(null)
     const [aiVoice, setAiVoice] = useState<AIVoice>('female_1')
     const [voiceFileDragDepth, setVoiceFileDragDepth] = useState(0)
+    const [isDownloading, setIsDownloading] = useState(false)
 
     // Step 5 — final result
     const [videoUrl, setVideoUrl] = useState<string | null>(null)
@@ -575,6 +576,39 @@ const VideoProjectWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     const totalPhotos = uploadedPhotos.length || draftPhotos.length
     const isFileDragOver = dragDepth > 0
     const isVoiceFileDragOver = voiceFileDragDepth > 0
+
+    const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault(); // Stop the browser from opening the URL
+        if (isDownloading || !videoUrl) return;
+
+        setIsDownloading(true);
+        try {
+            const url = resolveMediaUrl(videoUrl);
+            const response = await fetch(url);
+
+            if (!response.ok) throw new Error("Failed to fetch video");
+
+            // Convert the video to a local blob
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Create a temporary hidden link and click it
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = url.split('/').pop() || "project-video.mp4"; // Extracts filename from URL
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error("Download error:", err);
+            setError("Failed to download the video. Please try again.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     return (
         <div className="flex flex-col h-full overflow-hidden rounded-xl relative" style={{ background: '#f8fafc' }}>
@@ -979,10 +1013,24 @@ const VideoProjectWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                             </div>
 
                             <div className="flex items-center justify-center gap-3">
-                                <a href={resolveMediaUrl(videoUrl)} download
-                                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all active:scale-[0.98]"
-                                    style={{ background: '#0066cc', color: '#ffffff', boxShadow: '0 2px 8px rgba(0,102,204,0.25)' }}>
-                                    <DownloadIcon /> Download video
+                                <a
+                                    href={resolveMediaUrl(videoUrl)}
+                                    onClick={handleDownload}
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all active:scale-[0.98] cursor-pointer"
+                                    style={{
+                                        background: '#0066cc',
+                                        color: '#ffffff',
+                                        boxShadow: '0 2px 8px rgba(0,102,204,0.25)',
+                                        opacity: isDownloading ? 0.7 : 1,
+                                        pointerEvents: isDownloading ? 'none' : 'auto'
+                                    }}
+                                >
+                                    {isDownloading ? (
+                                        <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent" style={{ animation: 'vp-spin 0.8s linear infinite' }} />
+                                    ) : (
+                                        <DownloadIcon />
+                                    )}
+                                    {isDownloading ? 'Downloading...' : 'Download video'}
                                 </a>
                                 <SecondaryButton onClick={handleStartOver}>
                                     <PlayIcon /> Create another
