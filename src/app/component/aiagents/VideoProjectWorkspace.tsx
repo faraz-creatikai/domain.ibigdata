@@ -10,10 +10,23 @@ import {
    relative paths like "/uploads/xyz.jpg" returned by the API need a prefix.
    Set NEXT_PUBLIC_API_BASE_URL to your backend origin (e.g. http://localhost:5000). ── */
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || ''
+
 const resolveMediaUrl = (url?: string) => {
     if (!url) return ''
-    if (/^https?:\/\//.test(url) || url.startsWith('blob:')) return url
-    return `${API_BASE}${url}`
+    
+    let finalUrl = url;
+    
+    // If it's a relative path, prepend the API_BASE
+    if (!/^https?:\/\//.test(finalUrl) && !finalUrl.startsWith('blob:')) {
+        finalUrl = `${API_BASE}${finalUrl}`;
+    }
+
+    // 🔥 THE FIX: If the frontend is secure (HTTPS), force the media URL to be HTTPS too
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && finalUrl.startsWith('http://')) {
+        finalUrl = finalUrl.replace(/^http:\/\//i, 'https://');
+    }
+    
+    return finalUrl;
 }
 
 /* ── tiny icon components (same visual language as ScriptAgentWorkspace) ── */
