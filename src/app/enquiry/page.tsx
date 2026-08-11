@@ -19,6 +19,7 @@ import { getReferences } from "@/store/masters/references/references";
 import { getPrice } from "@/store/masters/price/price";
 import { getCustomerFields } from "@/store/masters/customerfields/customerfields";
 import dayjs from "dayjs";
+import { DEFAULT_COUNTRY_CODE } from "../utils/countryCodes";
 
 /* ────────────────────────────────────────────────────────── */
 /*  Types                                                      */
@@ -41,6 +42,7 @@ export default function CustomerWebForm() {
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [refId, setRefId] = useState("");
+      const [countryCode, setCountryCode] = useState<string>(DEFAULT_COUNTRY_CODE);
 
     const [customerData, setCustomerData] = useState<customerAllDataInterface>({
         Campaign: { id: "", name: "" },
@@ -250,7 +252,15 @@ export default function CustomerWebForm() {
         if (customerData.CustomerType) formData.append("CustomerType", customerData.CustomerType.name);
         if (customerData.customerName) formData.append("customerName", customerData.customerName);
         if (customerData.CustomerSubtype) formData.append("CustomerSubType", customerData.CustomerSubtype?.name);
-        if (customerData.ContactNumber) formData.append("ContactNumber", trimCountryCodeHelper(customerData.ContactNumber));
+           if (customerData.ContactNumber) {
+  formData.append(
+    "ContactNumber",
+    trimCountryCodeHelper(
+      customerData.ContactNumber,
+      countryCode
+    )
+  );
+}
         if (customerData.City) formData.append("City", customerData.City.name);
         if (customerData.Location) formData.append("Location", customerData.Location?.name);
         if (customerData.SubLocation) formData.append("SubLocation", customerData.SubLocation?.name);
