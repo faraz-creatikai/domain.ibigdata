@@ -1,4 +1,4 @@
-import { COUNTRY_CODES, countryCodes } from "./countryCodes";
+import { COUNTRY_CODES, countryCodes, getCountryLenRule } from "./countryCodes";
 
 export const trimCountryCodeHelper2 = (num: string) => {
   if (!num) return "";
@@ -16,19 +16,28 @@ export const trimCountryCodeHelper2 = (num: string) => {
   return trimmedNum;
 };
 
-export const trimCountryCodeHelper = (num: string): string => {
+export const trimCountryCodeHelper = (
+  num: string,
+  countryCode: string
+): string => {
   if (!num) return "";
+
   let digits = num.trim().replace(/[^0-9]/g, "");
 
-  // strip a leading '00' international prefix
-  if (digits.startsWith("00")) digits = digits.slice(2);
+  // Remove international 00 prefix only when followed by the selected country code
+  if (digits.startsWith(`00${countryCode}`)) {
+    digits = digits.slice(2);
+  }
 
-  const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
-  for (const { code, minLen, maxLen } of sorted) {
-    if (digits.startsWith(code)) {
-      const rest = digits.slice(code.length);
-      if (rest.length >= minLen && rest.length <= maxLen) return rest;
+  // Remove selected country code if present
+  if (digits.startsWith(countryCode)) {
+    const rest = digits.slice(countryCode.length);
+    const { minLen, maxLen } = getCountryLenRule(countryCode);
+
+    if (rest.length >= minLen && rest.length <= maxLen) {
+      return rest;
     }
   }
+
   return digits;
 };

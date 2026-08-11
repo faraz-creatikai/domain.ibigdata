@@ -64,8 +64,8 @@ const FollowupAddDialog = ({ isOpen, onClose, customerId, onArchived }: Props) =
     const newErrors: ErrorInterface = {};
     if (!formData.StartDate) newErrors.StartDate = "Start Date is required";
     if (!formData.StatusType) newErrors.StatusType = "Status is required";
-   /*  if (!formData.FollowupNextDate)
-      newErrors.FollowupNextDate = "Next Date is required"; */
+    /*  if (!formData.FollowupNextDate)
+       newErrors.FollowupNextDate = "Next Date is required"; */
     if (!formData.Description)
       newErrors.Description = "Description is required";
     return newErrors;
@@ -155,39 +155,37 @@ const FollowupAddDialog = ({ isOpen, onClose, customerId, onArchived }: Props) =
           />
 
           <div className="relative">
-  <TextareaField
-    name="Description"
-    label="Description"
-    value={formData.Description}
-    onChange={(e) => handleChange("Description", e.target.value)}
-    error={errors.Description}
-  />
+            <TextareaField
+              name="Description"
+              label="Description"
+              value={formData.Description}
+              onChange={(e) => handleChange("Description", e.target.value)}
+              error={errors.Description}
+            />
 
-  {/* 🎤 Voice button */}
-  <div className="absolute top-2 right-2">
-    <VoiceToText
-      value={formData.Description}
-      onChange={(text) => handleChange("Description", text)}
-    />
-  </div>
-</div>
+            {/* 🎤 Voice button */}
+            <div className="absolute top-2 right-2">
+              <VoiceToText
+                value={formData.Description}
+                onChange={(text) => handleChange("Description", text)}
+              />
+            </div>
+          </div>
 
           {/* Archive on save */}
           <button
             type="button"
             onClick={() => setArchiveOnSave((prev) => !prev)}
-            className={`flex cursor-pointer items-center gap-3 w-full text-left px-4 py-3 rounded-2xl border transition-all ${
-              archiveOnSave
+            className={`flex cursor-pointer items-center gap-3 w-full text-left px-4 py-3 rounded-2xl border transition-all ${archiveOnSave
                 ? "border-[var(--color-primary)] bg-[var(--color-primary-lighter)]"
                 : "border-gray-200 bg-gray-50 hover:border-gray-300"
-            }`}
+              }`}
           >
             <span
-              className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${
-                archiveOnSave
+              className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${archiveOnSave
                   ? "bg-[var(--color-primary)] border-[var(--color-primary)]"
                   : "bg-white border-gray-300"
-              }`}
+                }`}
             >
               {archiveOnSave && (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

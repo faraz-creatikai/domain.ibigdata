@@ -1998,7 +1998,7 @@ export default function Customer() {
     Script: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335553/img-10_ajsusz.png" alt="Social" className=" object-contain w-10 h-10" />,
     Assistant: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335552/img-8_twulvb.png" alt="Analytics" className=" object-contain w-10 h-10" />,
     Email: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335523/img-7_xjwzbl.png" alt="Followup" className=" object-contain w-10 h-10" />,
-    Video:<img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-3_scja92.png" alt="Recommendation" className=" object-contain w-10 h-10" />,
+    Video: <img src="https://res.cloudinary.com/djipgt6vc/image/upload/v1774335520/img-3_scja92.png" alt="Recommendation" className=" object-contain w-10 h-10" />,
     default: "AG",
   };
 
@@ -2623,20 +2623,20 @@ export default function Customer() {
       <div className=" sm:hidden min-h-[calc(100vh-56px)] overflow-auto max-sm:py-2">
 
         <div className="flex justify-between items-center px-0">
-  <h1 className="text-[var(--color-primary)] font-extrabold text-2xl">Leads</h1>
+          <h1 className="text-[var(--color-primary)] font-extrabold text-2xl">Leads</h1>
 
-  <button
-    onClick={() => router.push("/customer/archieved")}
-    aria-label="View archived customers"
-    className="relative w-9 h-9 flex items-center justify-center rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/8 dark:bg-[var(--color-primary)]/12 text-[var(--color-primary)] active:scale-[0.92] transition-all duration-150"
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
-    </svg>
+          <button
+            onClick={() => router.push("/customer/archieved")}
+            aria-label="View archived customers"
+            className="relative w-9 h-9 flex items-center justify-center rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/8 dark:bg-[var(--color-primary)]/12 text-[var(--color-primary)] active:scale-[0.92] transition-all duration-150"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+            </svg>
 
-    
-  </button>
-</div>
+
+          </button>
+        </div>
         <div className=" w-full">
           <DynamicAdvance>
             <ObjectSelect
@@ -3614,7 +3614,7 @@ export default function Customer() {
                     </div>
 
                     /* ── VIDEO  ── */
-                  ): selectedAgent && selectedAgent.type === "Video" ? (
+                  ) : selectedAgent && selectedAgent.type === "Video" ? (
                     <div className="flex-1 overflow-hidden px-6 py-4">
                       <VideoProjectWorkspace isOpen={isAIAgentsDialogOpen} />
                     </div>

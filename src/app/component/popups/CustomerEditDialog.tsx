@@ -244,7 +244,15 @@ export default function CustomerEditDialog({
     if (customerData.CustomerType) formData.append("CustomerType", customerData.CustomerType?.name);
     if (customerData.customerName) formData.append("customerName", customerData.customerName);
     if (customerData.CustomerSubtype) formData.append("CustomerSubType", customerData.CustomerSubtype?.name);
-    if (customerData.ContactNumber) formData.append("ContactNumber", trimCountryCodeHelper(customerData.ContactNumber));
+    if (customerData.ContactNumber) {
+  formData.append(
+    "ContactNumber",
+    trimCountryCodeHelper(
+      customerData.ContactNumber,
+      countryCode
+    )
+  );
+}
     formData.append("CountryCode", countryCode);
     if (customerData.City) formData.append("City", customerData.City?.name);
     if (customerData.Location) formData.append("Location", customerData.Location?.name);
