@@ -280,6 +280,11 @@ const TableDialog = ({
                                                             <span className="text-gray-400">N/A</span>
                                                         )}
                                                     </td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <a href={item.URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline break-all">
+                                                            {item.URL}
+                                                        </a>
+                                                    </td>
                                                     <td className="px-4 py-4 text-gray-700 dark:text-gray-400">{item.AssignTo.map((e: any) => e.name + ", ") || 'N/A'}</td>
                                                     <td className="px-4 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">{item.Date || 'N/A'}</td>
                                                     {renderActions && (
