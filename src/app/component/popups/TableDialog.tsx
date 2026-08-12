@@ -157,9 +157,12 @@ const TableDialog = ({
 
                                                 {
                                                     item.URL && (
+                                                        <div className="space-y-1">
+                                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">URL</p>
                                                         <a href={item.URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline break-all">
                                                             {item.URL}
                                                         </a>
+                                                        </div>
                                                     )
                                                 }
 
@@ -234,6 +237,9 @@ const TableDialog = ({
                                                     Contact No
                                                 </th>
                                                 <th className="px-4 py-4 border-b-2 border-[var(--color-primary)]/20 text-left font-bold uppercase tracking-wide text-xs whitespace-nowrap">
+                                                    URL
+                                                </th>
+                                                <th className="px-4 py-4 border-b-2 border-[var(--color-primary)]/20 text-left font-bold uppercase tracking-wide text-xs whitespace-nowrap">
                                                     Assign To
                                                 </th>
                                                 <th className="px-4 py-4 border-b-2 border-[var(--color-primary)]/20 text-left font-bold uppercase tracking-wide text-xs whitespace-nowrap">
@@ -280,7 +286,7 @@ const TableDialog = ({
                                                             <span className="text-gray-400">N/A</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-4 text-center">
+                                                    <td className="px-4 py-4 text-center  min-w-[200px]">
                                                         <a href={item.URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline break-all">
                                                             {item.URL}
                                                         </a>
