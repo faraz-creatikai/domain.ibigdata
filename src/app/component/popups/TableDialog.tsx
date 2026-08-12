@@ -25,7 +25,7 @@ const TableDialog = ({
     data,
     totalData,
     onClose,
-    isLoading = false ,
+    isLoading = false,
     renderActions
 }: TableDialogProps) => {
     if (!isOpen || !data) return null;
@@ -155,10 +155,18 @@ const TableDialog = ({
                                                     </div>
                                                 )}
 
+                                                {
+                                                    item.URL && (
+                                                        <a href={item.URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline break-all">
+                                                            {item.URL}
+                                                        </a>
+                                                    )
+                                                }
+
                                                 {/* Assign To */}
                                                 <div className="space-y-1">
                                                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">Assigned</p>
-                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{ item.AssignTo.map((e: any) => e.name + ", ") || 'N/A'}</p>
+                                                    <p className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{item.AssignTo.map((e: any) => e.name + ", ") || 'N/A'}</p>
                                                 </div>
 
                                                 {/* Date */}
