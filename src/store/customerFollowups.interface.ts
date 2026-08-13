@@ -8,6 +8,7 @@ export interface customerFollowupAllDataInterface {
     FollowupNextDate:string;
     Description:string;
     Name?:string;
+    CreatedBy?:string;
 }
 
 export interface customerFollowupGetDataInterface {
