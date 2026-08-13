@@ -17,6 +17,7 @@ export interface customerFollowupGetDataInterface {
     StatusType?:string;
     Name: string;
     ContactNumber: string;
+    Email?:string;
     User:string;
     Date:string;
 }
