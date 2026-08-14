@@ -460,6 +460,11 @@ export const API_ROUTES = {
     RENDER: `${BASE_URL}/video-project/render`,
   },
 
+  BRAND: {
+    GET: `${BASE_URL}/brand/get`,
+    UPDATE: `${BASE_URL}/brand/update`,
+  },
+
 
   ADMIN: {
     // 🔓 Public Routes

@@ -13,6 +13,7 @@ import RegisterPopup from "../component/popups/RegisterPopup";
 import { passwordRules, ValidatePassword } from "../utils/ValidatePassword";
 import { IoMdMail } from "react-icons/io";
 import { sidebarLogoPath } from "../data/PlatformData";
+import BrandLogo from "../component/labels/BrandLogo";
 
 
 
@@ -154,11 +155,10 @@ const Register = () => {
         <Toaster position="top-right" />
 
         <Link href="https://estateai.in" className="absolute top-4 left-4 sm:top-6 sm:left-8 z-10">
-          <img
-            src={sidebarLogoPath || "/applogo.jpeg"}
-            alt="EstateAI"
-            className="w-58 sm:w-40 md:w-48 lg:w-52 h-auto"
-          />
+          <BrandLogo
+                  variant="text"
+                  className="h-14 w-auto object-contain"
+                />
         </Link>
         <div className="flex items-center justify-center px-0  sm:px-6 lg:px-8 min-h-screen py-10 sm:py-24 lg:py-0">
           <div className=" w-full sm:max-w-5xl px-3  sm:max-w-5xl flex flex-col lg:flex-row items-center justify-center  lg:justify-between gap-0  lg:gap-12">

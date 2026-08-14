@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Link from "next/link";
 import { sidebarLogoPath } from "../data/PlatformData";
+import BrandLogo from "../component/labels/BrandLogo";
 
 
 const Login = () => {
@@ -64,11 +65,10 @@ const Login = () => {
 
         {/* LOGO */}
         <Link href="https://estateai.in" className="absolute top-4 left-4 sm:top-6 sm:left-8 z-10">
-          <img
-            src={sidebarLogoPath || "/applogo.jpeg"}
-            alt="EstateAI"
-            className="w-58 sm:w-40 md:w-48 lg:w-52 h-auto"
-          />
+           <BrandLogo
+                  variant="text"
+                  className="h-14 w-auto object-contain"
+                />
         </Link>
 
         {/* MAIN */}
