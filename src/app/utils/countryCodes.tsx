@@ -245,9 +245,13 @@ export const getCountryLenRule = (code: string) =>
   { code, iso2: "", name: code, minLen: 6, maxLen: 11 };
 
 // Converts "IN" -> 🇮🇳 using regional indicator symbols
-export const isoToFlagEmoji = (iso2: string): string => {
-  if (!iso2 || iso2.length !== 2) return "🏳️";
-  return String.fromCodePoint(
-    ...[...iso2.toUpperCase()].map((c) => 127397 + c.charCodeAt(0))
+export const isoToFlagEmoji = (iso2: string) => {
+  if (!iso2 || iso2.length !== 2) return <span>🏳️</span>;
+
+  return (
+    <span
+      className={`fi fi-${iso2.toLowerCase()} rounded-[2px]`}
+      style={{ width: 20, height: 15, display: "inline-block" }}
+    />
   );
 };
