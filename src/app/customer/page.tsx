@@ -2267,6 +2267,7 @@ export default function Customer() {
           setCustomerData((prevData) =>
             prevData.filter((customer) => customer?._id !== id)
           );
+          
         }}
       />
       {
