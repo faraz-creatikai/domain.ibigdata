@@ -346,7 +346,8 @@ export default function UsersPage() {
                                                 className="border-t hover:bg-[#f7f6f3] transition-all duration-200"
                                             >
                                                 <td className="px-4 border border-gray-200 py-3">{startIndex + index + 1}</td>
-                                                <td className="px-4 py-3 border border-gray-200 capitalize">{item.role}
+                                                <td className="px-4 py-3 border border-gray-200 capitalize">{item.role}</td>
+                                                 <td className="px-4 py-3 border border-gray-200">
                                                 <div className="flex items-center gap-2">
         <span>{item.name}</span>
         {item.isSuperAdmin && item.role === "administrator" && (
