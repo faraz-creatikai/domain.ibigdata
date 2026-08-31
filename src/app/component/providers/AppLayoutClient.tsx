@@ -21,6 +21,7 @@ export default function AppLayoutClient({ children }: { children: ReactNode }) {
   const {admin} = useAuth();
 
     useEffect(() => {
+
     if (!admin?._id) return;
     console.log("admin id in AppLayoutClient: ", admin._id);
     initSocket(admin._id);

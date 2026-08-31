@@ -7,8 +7,8 @@ export const DEFAULT_BRAND = {
     backgroundColor: "#ffffff",
 
     // Default static asset paths in your /public folder
-    faviconUrl: "/icons/favicon.ico",
-    logoTextUrl: "/propertytextlogo.png",        // Default logo with text
+    faviconUrl: "/favicon.ico",
+    logoTextUrl: "/domain-logo.png",        // Default logo with text
     logoIconUrl: "/propertyiconlogo.png",       // Default square icon
     splashScreenUrl: "/icons/icon-192x192.png",
     icon192Url: "/icons/icon-192x192.png",

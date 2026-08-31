@@ -60,8 +60,8 @@ export const API_ROUTES = {
 
     GETARCHIEVEDCUSTOMER: `${BASE_URL}/customer/archived`,
     GET_ARCHIEVEDCUSTOMER_BY_PARAMS: (params: string) => `${BASE_URL}/customer/archived?${params}`,
-    ARCHIEVECUSTOMER: (id: string) => `${BASE_URL}/customer/archive/${id}`,
-    UNARCHIEVECUSTOMER: (id: string) => `${BASE_URL}/customer/unarchive/${id}`,
+    ARCHIEVECUSTOMER: `${BASE_URL}/customer/archive`,
+    UNARCHIEVECUSTOMER: `${BASE_URL}/customer/unarchive`,
 
     ADDSHORTLIST: `${BASE_URL}/customer/shortlist`,
     GETSHORTLIST: (id: string) => `${BASE_URL}/customer/shortlist/${id}`,
@@ -463,6 +463,16 @@ export const API_ROUTES = {
   BRAND: {
     GET: `${BASE_URL}/brand/get`,
     UPDATE: `${BASE_URL}/brand/update`,
+  },
+
+  ACTIVITY: {
+    GETFEED: `${BASE_URL}/activity/feed`,
+    GETSUMMARY: `${BASE_URL}/activity/summary`,
+    GETUSERS: `${BASE_URL}/activity/users`,
+    GETTIMELINE: (adminId: string) => `${BASE_URL}/activity/timeline/${adminId}`,
+    GETCUSTOMERS: `${BASE_URL}/activity/customers`,
+    GETFOLLOWUPS: `${BASE_URL}/activity/followups`,
+    GETRECORD: (entity: string, id: string) => `${BASE_URL}/activity/record/${entity}/${id}`,
   },
 
 

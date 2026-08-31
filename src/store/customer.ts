@@ -633,12 +633,15 @@ export const getFilteredArchievedCustomer = async (params: string) => {
   }
 }
 
-export const archieveCustomer = async (id: string) => { 
+export const archieveCustomer = async (ids: string[]) => {
   try {
-    const response = await fetch(API_ROUTES.CUSTOMER.ARCHIEVECUSTOMER(id),
+
+    const payload = { customerIds: ids }
+    const response = await fetch(API_ROUTES.CUSTOMER.ARCHIEVECUSTOMER,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         credentials: "include"
       }
     );
@@ -652,12 +655,14 @@ export const archieveCustomer = async (id: string) => {
   }
 }
 
-export const unArchieveCustomer = async (id: string) => {
+export const unArchieveCustomer = async (ids: string[]) => {
   try {
-    const response = await fetch(API_ROUTES.CUSTOMER.UNARCHIEVECUSTOMER(id),
+    const payload = { customerIds: ids }
+    const response = await fetch(API_ROUTES.CUSTOMER.UNARCHIEVECUSTOMER,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         credentials: "include"
       }
     );
