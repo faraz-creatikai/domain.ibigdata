@@ -1,7 +1,7 @@
 "use client"
 import { formatDateDMY } from '@/app/utils/formatDateDMY'
 import { getCustomer } from '@/store/customer'
-import { emailCustomerViaAi } from '@/store/masters/mail/mail'
+import { emailCustomerViaAi, getMail } from '@/store/masters/mail/mail'
 import { emailTemplates, getEmailTemplateById, EmailTemplate } from '@/app/data/emailTemplate' // <-- Adjust this path
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 
@@ -13,6 +13,12 @@ const PAGE_SIZE = 20
 const RESULT_PAGE_SIZE = 8
 
 /* ── tiny icon components ── */
+const LayersIcon = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+    </svg>
+)
 const SearchIcon = () => (
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8" strokeWidth={2} />
@@ -316,6 +322,138 @@ const TemplatePickerModal = ({
                         <BlankTemplateCard selected={!selectedId} onClick={() => { onSelect(null); onClose() }} />
                         {filtered.map(t => (
                             <TemplateCard key={t.id} t={t} selected={selectedId === t.id} onClick={() => { onSelect(t.id); onClose() }} />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+const SavedTemplateCard = ({ t, selected, onClick }: { t: any; selected: boolean; onClick: () => void }) => (
+    <button
+        onClick={onClick}
+        className="flex flex-col rounded-2xl border overflow-hidden text-left transition-all"
+        style={{ borderColor: selected ? '#0d9488' : '#e7e2da', boxShadow: selected ? '0 0 0 3px rgba(13,148,136,0.12)' : '0 1px 3px rgba(0,0,0,0.03)', background: '#ffffff' }}
+    >
+        <div className="relative border-b" style={{ borderColor: '#e7e2da' }}>
+            <TemplateThumbnail html={t.body} size="card" label={t.name} />
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.04) 100%)' }} />
+            {selected && (
+                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#0d9488', boxShadow: '0 2px 6px rgba(13,148,136,0.4)' }}>
+                    <CheckIcon />
+                </div>
+            )}
+        </div>
+        <div className="px-3 py-2.5">
+            <div className="flex items-center gap-1.5">
+                <p className="text-[11px] font-bold truncate" style={{ color: '#1c1917' }}>{t.name}</p>
+                {t.category && (
+                    <span className="text-[8.5px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: '#f0fdfa', color: '#0f766e' }}>{t.category}</span>
+                )}
+            </div>
+            <p className="text-[9.5px] mt-0.5 truncate font-medium" style={{ color: '#0d9488' }}>{t.subject || 'No subject'}</p>
+            <p className="text-[9.5px] mt-0.5 line-clamp-2 leading-relaxed" style={{ color: '#94a3b8' }}>{t.description || 'Saved email template'}</p>
+        </div>
+    </button>
+)
+
+const SavedTemplatePickerModal = ({
+    open, templates, isLoading, selectedId, onSelect, onClose,
+}: {
+    open: boolean
+    templates: any[]
+    isLoading: boolean
+    selectedId: string | null
+    onSelect: (id: string) => void
+    onClose: () => void
+}) => {
+    const [query, setQuery] = useState('')
+    const [category, setCategory] = useState('All')
+
+    useEffect(() => {
+        if (!open) return
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [open, onClose])
+
+    useEffect(() => { if (open) { setQuery(''); setCategory('All') } }, [open])
+
+    if (!open) return null
+
+    const categories = ['All', ...Array.from(new Set(templates.map(t => t.category).filter(Boolean))) as string[]]
+    const filtered = templates.filter(t => {
+        const matchesCategory = category === 'All' || t.category === category
+        const q = query.trim().toLowerCase()
+        const matchesQuery = !q
+            || (t.name || '').toLowerCase().includes(q)
+            || (t.subject || '').toLowerCase().includes(q)
+            || (t.description || '').toLowerCase().includes(q)
+        return matchesCategory && matchesQuery
+    })
+
+    return (
+        <div className="absolute inset-0 z-50 flex flex-col" style={{ background: '#fbfaf8', animation: 'ec-modal-in 0.16s cubic-bezier(0.34,1.56,0.64,1)' }}>
+            <div className="flex-shrink-0 px-6 py-4 border-b flex items-center gap-4" style={{ borderColor: '#e7e2da', background: '#ffffff' }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(13,148,136,0.1)' }}>
+                    <LayersIcon />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-[14px] font-bold" style={{ color: '#1c1917' }}>Choose a saved template</p>
+                    <p className="text-[10.5px]" style={{ color: '#94a3b8' }}>Sent exactly as saved — no AI writing, no per-customer cost</p>
+                </div>
+                <button onClick={onClose} className="ml-auto cursor-pointer w-8 h-8 rounded-lg flex items-center justify-center transition-all flex-shrink-0" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                    <CloseIcon />
+                </button>
+            </div>
+
+            <div className="flex-shrink-0 px-6 py-3 border-b flex items-center gap-3 flex-wrap" style={{ borderColor: '#e7e2da', background: '#ffffff' }}>
+                <div className="relative" style={{ width: 240 }}>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#94a3b8' }}><SearchIcon /></div>
+                    <input
+                        type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search saved templates…"
+                        className="w-full pl-8 pr-3 py-2 rounded-xl text-[11.5px] outline-none border bg-stone-50 border-slate-200 text-slate-700 focus:border-teal-300 focus:ring-2 focus:ring-teal-100 focus:bg-white"
+                    />
+                </div>
+                {categories.length > 1 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {categories.map(c => (
+                            <button key={c} onClick={() => setCategory(c)}
+                                className="text-[10px] cursor-pointer font-semibold px-2.5 py-1 rounded-full transition-all"
+                                style={category === c ? { background: '#0d9488', color: '#ffffff' } : { background: '#f1f5f9', color: '#94a3b8' }}>
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                <span className="ml-auto text-[10.5px] font-medium" style={{ color: '#94a3b8' }}>{filtered.length} template{filtered.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e7e2da transparent' }}>
+                {isLoading ? (
+                    <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="animate-pulse rounded-2xl border overflow-hidden" style={{ borderColor: '#e7e2da' }}>
+                                <div className="bg-gray-200" style={{ height: 168 }} />
+                                <div className="p-3"><div className="h-2.5 bg-gray-200 rounded w-2/3 mb-1.5" /><div className="h-2 bg-gray-100 rounded w-1/2" /></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2.5" style={{ background: '#f1f5f9', color: '#cbd5e1' }}><SearchIcon /></div>
+                        <p className="text-[12px] font-semibold" style={{ color: '#334155' }}>
+                            {templates.length === 0 ? 'No saved email templates yet' : `No templates match "${query}"`}
+                        </p>
+                        <p className="text-[11px] mt-1" style={{ color: '#94a3b8' }}>
+                            {templates.length === 0 ? 'Create one in Templates to reuse it here at zero AI cost.' : 'Try a different search term or category'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                        {filtered.map(t => (
+                            <SavedTemplateCard key={t._id} t={t} selected={selectedId === t._id} onClick={() => { onSelect(t._id); onClose() }} />
                         ))}
                     </div>
                 )}
@@ -849,58 +987,38 @@ const CustomerRow = ({ c, isSelected, onToggle, onView, disabled }: { c: any; is
 )
 
 const ResultRow = ({ r, customerLookup, onView }: { r: any; customerLookup: (id: string) => any; onView: (c: any) => void }) => {
-    const [showSummary, setShowSummary] = useState(false)
     const cfg = getResultStatusCfg(r.status)
     const full = customerLookup(r.id)
     const displayName = full?.Name || r.name || r.email || 'Unknown'
-    const hasSummary = !!r.workSummary && r.workSummary.trim().length > 0
-    useEffect(() => { if (hasSummary) setShowSummary(true) }, [r])
     return (
-        <div className="rounded-xl border overflow-hidden" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
-            <div className="flex items-center gap-2.5 px-3 py-2">
-                <Avatar name={displayName} size="sm" />
-                <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold truncate" style={{ color: '#1e293b' }}>{displayName}</p>
-                    <p className="text-[9.5px] truncate" style={{ color: '#94a3b8' }}>
-                        {r.email || full?.Email || '—'}
-                        {r.status === 'failed' && r.error ? <span style={{ color: '#dc2626' }}> · {r.error}</span> : null}
-                    </p>
-                </div>
-                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 flex-shrink-0" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
-                    <span className="w-1 h-1 rounded-full inline-block" style={{ background: cfg.dot }} />
-                    {cfg.label}
-                </span>
-                {hasSummary && (
-                    <button
-                        onClick={() => setShowSummary(v => !v)}
-                        className="flex-shrink-0 cursor-pointer flex items-center gap-1 px-2 py-1 rounded-lg border text-[9.5px] font-semibold transition-all"
-                        style={showSummary ? { background: '#eef2ff', borderColor: '#c7d2fe', color: '#4338ca' } : { background: '#ffffff', borderColor: '#e2e8f0', color: '#94a3b8' }}
-                    >
-                        <SparkleIcon /> Why this email
-                    </button>
-                )}
-                <button
-                    onClick={() => onView(full || { Name: displayName, Email: r.email, CustomerId: r.id })}
-                    className="flex-shrink-0 cursor-pointer flex items-center justify-center w-6 h-6 rounded-lg border"
-                    style={{ background: '#ffffff', borderColor: '#e2e8f0', color: '#94a3b8' }}
-                >
-                    <EyeIcon />
-                </button>
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl border" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+            <Avatar name={displayName} size="sm" />
+            <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold truncate" style={{ color: '#1e293b' }}>{displayName}</p>
+                <p className="text-[9.5px] truncate" style={{ color: '#94a3b8' }}>
+                    {r.email || full?.Email || '—'}
+                    {r.status === 'failed' && r.error ? <span style={{ color: '#dc2626' }}> · {r.error}</span> : null}
+                </p>
             </div>
-            {hasSummary && showSummary && (
-                <div className="px-3 pb-3 pt-0.5">
-                    <div className="rounded-lg border px-3 py-2.5" style={{ background: '#ffffff', borderColor: '#e2e8f0' }}>
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: '#94a3b8' }}>
-                            <SparkleIcon /> AI strategy for this customer
-                        </p>
-                        <p className="text-[10.5px] leading-relaxed whitespace-pre-line" style={{ color: '#475569' }}>{r.workSummary}</p>
-                    </div>
-                </div>
-            )}
+            <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 flex-shrink-0" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
+                <span className="w-1 h-1 rounded-full inline-block" style={{ background: cfg.dot }} />
+                {cfg.label}
+            </span>
+            <button
+                onClick={() => onView(full || { Name: displayName, Email: r.email, CustomerId: r.id })}
+                className="flex-shrink-0 cursor-pointer flex items-center justify-center w-6 h-6 rounded-lg border"
+                style={{ background: '#ffffff', borderColor: '#e2e8f0', color: '#94a3b8' }}
+            >
+                <EyeIcon />
+            </button>
         </div>
     )
 }
-
+const MODE_LABELS: Record<string, string> = {
+    ai: 'AI-generated campaign',
+    existing: 'Saved template campaign',
+    manual: 'Manual template campaign',
+}
 const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, customerLookup, onView }: { run: any; expanded: boolean; onToggleExpand: () => void; visibleCount: number; onLoadMore: () => void; customerLookup: (id: string) => any; onView: (c: any) => void }) => {
     const headerTone = run.sentCount > 0 ? { bg: '#f0fdf4', color: '#166534' } : { bg: '#fef2f2', color: '#b91c1c' }
     const results = run.results || []
@@ -916,7 +1034,7 @@ const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, cust
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-[11.5px] font-semibold" style={{ color: '#0f172a' }}>{run.mode === 'ai' ? 'AI-generated campaign' : 'Manual template campaign'}</p>
+                            <p className="text-[11.5px] font-semibold" style={{ color: '#0f172a' }}>{MODE_LABELS[run.mode] || 'Campaign'}</p>
                             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: '#f1f5f9', color: '#64748b' }}>{run.language}</span>
                             {run.templateName && (
                                 <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: '#f0fdfa', color: '#0f766e' }}>{run.templateName}</span>
@@ -924,6 +1042,19 @@ const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, cust
                             <span className="text-[9.5px]" style={{ color: '#cbd5e1' }}>{run.timestamp?.toLocaleString?.(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {run.promptEcho && <p className="text-[11px] italic mt-1 line-clamp-2" style={{ color: '#64748b' }}>"{run.promptEcho}"</p>}
+                        {run.mode === 'ai' && run.workSummary && (
+                            <div className="mt-2 rounded-lg border px-3 py-2.5" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+                                <p className="text-[9px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: '#94a3b8' }}>
+                                    <SparkleIcon /> AI strategy used for this campaign
+                                </p>
+                                <p className="text-[10.5px] leading-relaxed whitespace-pre-line" style={{ color: '#475569' }}>{run.workSummary}</p>
+                                {run.metadata?.tone && (
+                                    <p className="text-[9.5px] mt-1.5" style={{ color: '#94a3b8' }}>
+                                        Tone: {run.metadata.tone}{run.metadata.category ? ` · ${run.metadata.category}` : ''}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -953,7 +1084,7 @@ const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, cust
     )
 }
 
-const ConfirmSendModal = ({ open, targetCount, mode, language, promptEcho, subject, templateName, isSending, error, onCancel, onConfirm }: { open: boolean; targetCount: number; mode: 'ai' | 'manual'; language: string; promptEcho: string; subject: string; templateName?: string | null; isSending: boolean; error: string | null; onCancel: () => void; onConfirm: () => void }) => {
+const ConfirmSendModal = ({ open, targetCount, mode, language, promptEcho, subject, templateName, isSending, error, onCancel, onConfirm }: { open: boolean; targetCount: number; mode: 'ai' | 'manual' | 'existing'; language: string; promptEcho: string; subject: string; templateName?: string | null; isSending: boolean; error: string | null; onCancel: () => void; onConfirm: () => void }) => {
     if (!open) return null
     return (
         <div className="absolute inset-0 z-40 flex items-center justify-center px-6" style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(2px)' }}>
@@ -967,10 +1098,23 @@ const ConfirmSendModal = ({ open, targetCount, mode, language, promptEcho, subje
                     </p>
 
                     <div className="mt-3 px-3 py-2.5 rounded-xl border" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
-                        <p className="text-[9.5px] font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>{mode === 'ai' ? `AI draft · ${language}` : 'Manual template'}</p>
-                        <p className="text-[11px] mt-1 leading-relaxed line-clamp-3" style={{ color: '#334155' }}>{mode === 'ai' ? `"${promptEcho}"` : subject}</p>
-                        {mode === 'ai' && <p className="text-[10px] mt-1.5" style={{ color: '#94a3b8' }}>Each customer gets a uniquely written email based on this brief and their own data.</p>}
-                        {templateName && <p className="text-[10px] mt-1.5 flex items-center gap-1" style={{ color: '#0f766e' }}><SparkleIcon /> Using "{templateName}" as the base layout</p>}
+                        <p className="text-[9.5px] font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                            {mode === 'ai' ? `AI draft · ${language}` : mode === 'existing' ? (templateName || 'Saved template') : 'Manual template'}
+                        </p>
+                        <p className="text-[11px] mt-1 leading-relaxed line-clamp-3" style={{ color: '#334155' }}>
+                            {mode === 'ai' ? `"${promptEcho}"` : (subject || '(no subject)')}
+                        </p>
+                        {mode === 'ai' && (
+                            <p className="text-[10px] mt-1.5" style={{ color: '#94a3b8' }}>
+                                Written once for the whole batch, then personalized per customer — name, city, and other saved details are swapped in automatically.
+                            </p>
+                        )}
+                        {mode === 'existing' && (
+                            <p className="text-[10px] mt-1.5" style={{ color: '#94a3b8' }}>
+                                Sent exactly as saved — no AI involved, only tokens like name and city are personalized.
+                            </p>
+                        )}
+                        {mode === 'ai' && templateName && <p className="text-[10px] mt-1.5 flex items-center gap-1" style={{ color: '#0f766e' }}><SparkleIcon /> Using "{templateName}" as the base layout</p>}
                     </div>
 
                     {error && <p className="text-[11px] mt-3 px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#b91c1c' }}>{error}</p>}
@@ -998,7 +1142,7 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [sendToAll, setSendToAll] = useState(false)
 
-    const [composerTab, setComposerTab] = useState<'ai' | 'manual'>('ai')
+    const [composerTab, setComposerTab] = useState<'ai' | 'manual' | 'existing'>('ai')
     const [userPrompt, setUserPrompt] = useState('')
     const [language, setLanguage] = useState('english')
     const [subject, setSubject] = useState('')
@@ -1008,6 +1152,14 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
     const [isPreviewMode, setIsPreviewMode] = useState(false)
     const [isPickerOpen, setIsPickerOpen] = useState(false)
+
+    // Saved DB templates (your real Template model) — used by the "Saved
+    // Template" tab, sent via templateId, zero AI cost.
+    const [dbTemplates, setDbTemplates] = useState<any[]>([])
+    const [isDbTemplatesLoading, setIsDbTemplatesLoading] = useState(false)
+    const [dbTemplatesFetched, setDbTemplatesFetched] = useState(false)
+    const [selectedDbTemplateId, setSelectedDbTemplateId] = useState<string | null>(null)
+    const [isSavedPickerOpen, setIsSavedPickerOpen] = useState(false)
 
     const [isSending, setIsSending] = useState(false)
     const [sendError, setSendError] = useState<string | null>(null)
@@ -1044,6 +1196,38 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
             if (res) setCustomers(res.map(mapCustomer))
         } catch (err) { console.error(err) } finally { setIsCustomersLoading(false) }
     }
+
+    // This CRM Template list is shared with WhatsApp — filter to email-only.
+    // NOTE: getMail() hits GET_ALL with no query params; if that route paginates
+    // server-side with a default limit, you may only get the first page back —
+    // worth checking the endpoint if templates seem to be missing here.
+    const emailDbTemplates = useMemo(
+        () => dbTemplates.filter((t: any) => String(t.type || '').toLowerCase() === 'email'),
+        [dbTemplates]
+    )
+
+    const selectedDbTemplate = useMemo(
+        () => emailDbTemplates.find((t: any) => t._id === selectedDbTemplateId) || null,
+        [emailDbTemplates, selectedDbTemplateId]
+    )
+
+    const fetchDbTemplates = async () => {
+        setIsDbTemplatesLoading(true)
+        try {
+            const res = await getMail()
+            if (res) setDbTemplates(res)
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setIsDbTemplatesLoading(false)
+            setDbTemplatesFetched(true)
+        }
+    }
+
+    // Lazy-load: only fetch once the user actually opens the Saved Template tab.
+    useEffect(() => {
+        if (composerTab === 'existing' && !dbTemplatesFetched) fetchDbTemplates()
+    }, [composerTab, dbTemplatesFetched])
 
     useEffect(() => { fetchCustomers() }, [])
     useEffect(() => { setVisibleCount(PAGE_SIZE) }, [searchQuery])
@@ -1116,7 +1300,10 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     const customerLookup = (id: string) => customers.find((c: any) => c._id === id)
 
     const hasTargets = sendToAll || selectedIds.size > 0
-    const hasContent = composerTab === 'ai' ? userPrompt.trim().length > 0 : (subject.trim().length > 0 && body.trim().length > 0)
+    const hasContent =
+        composerTab === 'ai' ? userPrompt.trim().length > 0 :
+            composerTab === 'manual' ? (subject.trim().length > 0 && body.trim().length > 0) :
+                !!selectedDbTemplateId
     const canSend = hasTargets && hasContent && !isSending
     const targetCount = sendToAll ? customers.length : selectedIds.size
 
@@ -1137,57 +1324,79 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
         }
     }
 
-    const handleSend = async () => {
-        if (isSending) return
-        setSendError(null)
-        setIsSending(true)
-        try {
-            const payload: any = { customerIds: sendToAll ? [] : Array.from(selectedIds), sendToAll, mode: language }
-            if (composerTab === 'ai') {
-                payload.userPrompt = userPrompt.trim()
-                if (selectedTemplate) payload.templateHtml = selectedTemplate.html
-            } else {
-                payload.Subject = subject.trim()
-                payload.Body = body.trim()
-            }
-
-            const res: any = await emailCustomerViaAi(payload)
-            if (!res || res.success === false) {
-                setSendError('Something went wrong while sending the campaign. Please try again.')
-                setIsSending(false)
-                return
-            }
-
-            const results = res.results || []
-            const sentCount = typeof res.sent === 'number' ? res.sent : results.filter((r: any) => r.status === 'sent').length
-            const failedCount = results.filter((r: any) => r.status === 'failed').length
-            const skippedCount = results.length - sentCount - failedCount
-
-            const runId = `run_${Date.now()}`
-            const run = {
-                id: runId, mode: composerTab, language,
-                promptEcho: composerTab === 'ai' ? userPrompt.trim() : subject.trim(),
-                templateName: selectedTemplate?.name || null,
-                targetCount, sentCount, failedCount, skippedCount: Math.max(0, skippedCount),
-                results, timestamp: new Date(),
-            }
-            setRuns(prev => [run, ...prev])
-            setRunExpandedMap(prev => ({ ...prev, [runId]: results.length > 0 && results.length <= 5 }))
-            setRunVisibleMap(prev => ({ ...prev, [runId]: RESULT_PAGE_SIZE }))
-            setToast({ type: 'success', text: `Campaign sent — ${sentCount} delivered${failedCount ? `, ${failedCount} failed` : ''}.` })
-
-            setUserPrompt('')
-            setSubject('')
-            setBody('')
-            setSelectedTemplateId(null)
-            setShowConfirm(false)
-        } catch (err: any) {
-            console.error(err)
-            setSendError('Something went wrong while sending the campaign. Please try again.')
-        } finally {
-            setIsSending(false)
+    const getPromptEcho = (): string => {
+        switch (composerTab) {
+            case 'ai': return userPrompt.trim()
+            case 'manual': return subject.trim()
+            case 'existing': return selectedDbTemplate?.subject || ''
         }
     }
+
+    const getTemplateName = (): string | null => {
+        switch (composerTab) {
+            case 'existing': return selectedDbTemplate?.name || null
+            case 'ai': return selectedTemplate?.name || null
+            case 'manual': return null
+        }
+    }
+
+const handleSend = async () => {
+    if (isSending) return
+    setSendError(null)
+    setIsSending(true)
+    try {
+        const payload: any = { customerIds: sendToAll ? [] : Array.from(selectedIds), sendToAll, mode: language }
+        if (composerTab === 'ai') {
+            payload.userPrompt = userPrompt.trim()
+            if (selectedTemplate) payload.templateHtml = selectedTemplate.html
+        } else if (composerTab === 'manual') {
+            payload.Subject = subject.trim()
+            payload.Body = body.trim()
+        } else {
+            payload.templateId = selectedDbTemplateId
+        }
+
+        const res: any = await emailCustomerViaAi(payload)
+        if (!res || res.success === false) {
+            setSendError('Something went wrong while sending the campaign. Please try again.')
+            setIsSending(false)
+            return
+        }
+
+        const results = res.results || []
+        const sentCount = typeof res.sent === 'number' ? res.sent : results.filter((r: any) => r.status === 'sent').length
+        const failedCount = results.filter((r: any) => r.status === 'failed').length
+        const skippedCount = results.length - sentCount - failedCount
+
+        const runId = `run_${Date.now()}`
+        const run = {
+            id: runId, mode: composerTab, language,
+            promptEcho: getPromptEcho(),
+            templateName: getTemplateName(),
+            targetCount, sentCount, failedCount, skippedCount: Math.max(0, skippedCount),
+            results,
+            metadata: res.metadata || null,
+            workSummary: res.workSummary || null,
+            timestamp: new Date(),
+        }
+        setRuns(prev => [run, ...prev])
+        setRunExpandedMap(prev => ({ ...prev, [runId]: results.length > 0 && results.length <= 5 }))
+        setRunVisibleMap(prev => ({ ...prev, [runId]: RESULT_PAGE_SIZE }))
+        setToast({ type: 'success', text: `Campaign sent — ${sentCount} delivered${failedCount ? `, ${failedCount} failed` : ''}.` })
+
+        setUserPrompt('')
+        setSubject('')
+        setBody('')
+        setSelectedTemplateId(null)
+        setSelectedDbTemplateId(null)
+        setShowConfirm(false)
+    } catch (err: any) {
+        console.error(err)
+        setSendError('Something went wrong while sending the campaign. Please try again.')
+    } finally {
+        setIsSending(false)
+    }
+}
 
     return (
         <div className="flex h-full overflow-hidden rounded-xl relative" style={{ background: '#f8fafc' }}>
@@ -1283,7 +1492,7 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(79,70,229,0.1)', color: '#4f46e5' }}><EnvelopeIcon className="w-4 h-4" /></div>
                     <div className="min-w-0">
                         <p className="text-[13px] font-semibold" style={{ color: '#1e293b' }}>Email Campaign Agent</p>
-                        <p className="text-[10.5px]" style={{ color: '#94a3b8' }}>Drafts and sends a personalized email to every targeted customer</p>
+                        <p className="text-[10.5px]" style={{ color: '#94a3b8' }}>Writes one on-brief message and personalizes it — name, city, and more — for every targeted customer</p>
                     </div>
                     {runs.length > 0 && (
                         <span className="ml-auto text-[10px] font-mono font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: '#f1f5f9', color: '#64748b' }}>
@@ -1304,6 +1513,11 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                                     className="flex items-center cursor-pointer gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all"
                                     style={composerTab === 'ai' ? { background: '#4f46e5', color: '#ffffff', boxShadow: '0 2px 6px rgba(79,70,229,0.35)' } : { color: '#64748b' }}>
                                     <SparkleIcon /> AI Generate
+                                </button>
+                                <button onClick={() => setComposerTab('existing')}
+                                    className="flex items-center cursor-pointer gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all"
+                                    style={composerTab === 'existing' ? { background: '#4f46e5', color: '#ffffff', boxShadow: '0 2px 6px rgba(79,70,229,0.35)' } : { color: '#64748b' }}>
+                                    <LayersIcon /> Saved Template
                                 </button>
                                 <button onClick={() => setComposerTab('manual')}
                                     className="flex items-center cursor-pointer gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all"
@@ -1340,7 +1554,7 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
 
                                 <p className="text-[10.5px] font-semibold mb-1.5 mt-3.5 flex items-center gap-1.5" style={{ color: '#334155' }}>
                                     <EnvelopeIcon className="w-3 h-3" /> Starting template
-                                    <span className="text-[9px] font-normal" style={{ color: '#cbd5e1' }}>(optional — AI adapts the layout per customer)</span>
+                                    <span className="text-[9px] font-normal" style={{ color: '#cbd5e1' }}>(optional — the layout AI's message gets inserted into)</span>
                                 </p>
                                 {selectedTemplate ? (
                                     <SelectedTemplateChip template={selectedTemplate} onChange={() => setIsPickerOpen(true)} onClear={() => setSelectedTemplateId(null)} />
@@ -1348,7 +1562,40 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                                     <ChooseTemplateButton label="Choose a template as a base" onClick={() => setIsPickerOpen(true)} />
                                 )}
                             </div>
-                        ) : (
+
+                        ) : composerTab === 'existing' ? (<div className="px-4 pt-3 pb-4 relative">
+                            <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>Saved template</p>
+                            <p className="text-[9.5px] mb-3 leading-relaxed" style={{ color: '#94a3b8' }}>
+                                Sent exactly as saved to every targeted customer — name, city, and other tokens are still swapped per customer. No AI writing, no extra cost.
+                            </p>
+
+                            {selectedDbTemplate ? (
+                                <div className="flex flex-col gap-2.5">
+                                    <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl border" style={{ borderColor: '#e7e2da', background: '#fbfaf8' }}>
+                                        <TemplateThumbnail html={selectedDbTemplate.body} size="chip" label={selectedDbTemplate.name} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10.5px] font-semibold truncate" style={{ color: '#1c1917' }}>{selectedDbTemplate.name}</p>
+                                            <p className="text-[9px] truncate" style={{ color: '#94a3b8' }}>{selectedDbTemplate.subject || 'No subject'}</p>
+                                        </div>
+                                        <button onClick={() => setIsSavedPickerOpen(true)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#0d9488' }}>Change</button>
+                                        <button onClick={() => setSelectedDbTemplateId(null)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#94a3b8' }}>Clear</button>
+                                    </div>
+                                    <div className="w-full h-[280px] rounded-xl border overflow-hidden bg-white shadow-inner" style={{ borderColor: '#e2e8f0' }}>
+                                        <iframe srcDoc={selectedDbTemplate.body} className="w-full h-full border-none" title="Saved template preview" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setIsSavedPickerOpen(true)}
+                                    className="w-full flex flex-col items-center justify-center gap-2 px-3 py-8 rounded-xl border border-dashed cursor-pointer transition-all hover:border-teal-300 hover:bg-teal-50/40"
+                                    style={{ borderColor: '#e7e2da', color: '#94a3b8' }}
+                                >
+                                    <LayersIcon />
+                                    <span className="text-[11px] font-semibold">Choose a saved template</span>
+                                    <span className="text-[9.5px]">{isDbTemplatesLoading ? 'Loading…' : `${emailDbTemplates.length} available`}</span>
+                                </button>
+                            )}
+                        </div>) : (
                             <div className="px-4 pt-3 pb-4 relative">
 
                                 <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>Template</p>
@@ -1465,8 +1712,12 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                 )}
 
                 <ConfirmSendModal
-                    open={showConfirm} targetCount={targetCount} mode={composerTab} language={language} promptEcho={userPrompt.trim()} subject={subject.trim()} templateName={selectedTemplate?.name || null} isSending={isSending} error={sendError} onCancel={() => !isSending && setShowConfirm(false)} onConfirm={handleSend}
-                />
+    open={showConfirm} targetCount={targetCount} mode={composerTab} language={language}
+    promptEcho={getPromptEcho()}
+    subject={composerTab === 'existing' ? (selectedDbTemplate?.subject || '') : subject.trim()}
+    templateName={getTemplateName()}
+    isSending={isSending} error={sendError} onCancel={() => !isSending && setShowConfirm(false)} onConfirm={handleSend}
+/>
             </div>
 
             {viewingCustomer && <CustomerDetailDrawer customer={viewingCustomer} onClose={() => setViewingCustomer(null)} />}
@@ -1477,6 +1728,14 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                 selectedId={selectedTemplateId}
                 onSelect={handleSelectTemplate}
                 onClose={() => setIsPickerOpen(false)}
+            />
+            <SavedTemplatePickerModal
+                open={isSavedPickerOpen}
+                templates={emailDbTemplates}
+                isLoading={isDbTemplatesLoading}
+                selectedId={selectedDbTemplateId}
+               onSelect={(id) => setSelectedDbTemplateId(id)}
+                onClose={() => setIsSavedPickerOpen(false)}
             />
             <GoalPickerModal
                 open={isGoalPickerOpen}
@@ -1492,7 +1751,7 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
         @keyframes ec-toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes ec-run-in { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
-        </div>
+        </div >
     )
 }
 
