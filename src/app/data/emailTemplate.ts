@@ -1,9 +1,19 @@
+
+
+export interface EmailTemplateAiSlot {
+  id: string
+  label: string
+  guidance: string
+  format?: 'paragraph' | 'bullets' | 'short'
+}
+
 export interface EmailTemplate {
   id: string
   name: string
   description?: string
   category?: string
   html: string
+  aiSlots?: EmailTemplateAiSlot[]   // present => AI writes full content for this design
 }
 
 /**
@@ -23,12 +33,71 @@ export interface EmailTemplate {
  * skeleton.
  */
 export const emailTemplates: EmailTemplate[] = [
-  {
-    id: 'website-audit-outreach',
-    name: 'Website Audit Outreach',
-    description: 'Full audit-style letter with performance scores — send as-is once CustomerFields has the score keys',
-    category: 'Outreach',
-    html: `<!DOCTYPE html>
+{
+  id: 'website-audit-ai-fill',
+  name: 'Website Audit (AI-written)',
+  description: 'Same audit-style design — AI writes the full analysis using each batch\'s available CustomerFields',
+  category: 'Outreach',
+  aiSlots: [
+    {
+      id: 'greeting',
+      label: 'Opening greeting',
+      format: 'short',
+      guidance: 'One short warm line greeting the recipient. Use {{Name}} if it is in availablePlaceholders (e.g. "Hello {{Name}} team,"), otherwise a generic greeting. No sign-off, no extra sentences.',
+    },
+    {
+      id: 'intro',
+      label: 'Analysis intro',
+      format: 'paragraph',
+      guidance: 'One to two sentences introducing why you are reaching out, based on userPrompt. Where natural, reference their site/business using an available token (e.g. {{URL}}, {{CustomerType}}, {{City}}) if present. Do not mention specific scores here.',
+    },
+    {
+      id: 'snapshotLeadIn',
+      label: 'Score section lead-in',
+      format: 'short',
+      guidance: 'One short sentence introducing the performance breakdown that follows. Do not list actual scores here.',
+    },
+    {
+      id: 'scoreRows',
+      label: 'Score breakdown rows',
+      format: 'bullets',
+      guidance: `Return ONLY <tr> rows — no <table> wrapper, no surrounding text — one row per item below, using exactly this pattern per row:
+<tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>LABEL:</b> TOKEN/100</td></tr>
+Items, in this order — SKIP any item whose token is not present in availablePlaceholders (never fabricate a number):
+1. Design -> {{CustomerFields.DesignScore}}
+2. Mobile Experience -> {{CustomerFields.MobileScore}}
+3. SEO -> {{CustomerFields.SEOScore}}
+4. Lead Generation -> {{CustomerFields.LeadGenerationScore}}
+5. AI & Automation -> {{CustomerFields.AIAutomationScore}}
+6. Overall -> {{CustomerFields.OverallWebsiteScore}}
+No commentary, no extra rows, no other HTML tags.`,
+    },
+    {
+      id: 'opportunities',
+      label: 'Opportunities / gaps',
+      format: 'paragraph',
+      guidance: 'One to two sentences naming specific weak areas, using {{CustomerFields.LackingWebDevelopment}} / {{CustomerFields.LackingSEO}} if available. If neither is available, speak generally about common gaps relevant to the campaign goal instead of inventing specifics.',
+    },
+    {
+      id: 'servicesPitch',
+      label: 'How we can help',
+      format: 'paragraph',
+      guidance: 'One to two sentences on how the agency can help close those specific gaps, tying back to userPrompt. Concrete, not generic boilerplate.',
+    },
+    {
+      id: 'monetization',
+      label: 'Additional opportunity',
+      format: 'paragraph',
+      guidance: 'One to two sentences on a further commercial opportunity, using {{CustomerFields.MonetizeArea}} or {{CustomerFields.ImprovementArea}} if available; otherwise reinforce the main value proposition instead.',
+    },
+    {
+      id: 'closing',
+      label: 'Closing + call to action',
+      format: 'paragraph',
+      guidance: 'One to two sentences offering a concrete next step and inviting a reply, ending with a light question. No sign-off line — that is added separately.',
+    },
+  ],
+  html: `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -42,7 +111,6 @@ export const emailTemplates: EmailTemplate[] = [
       <td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
 
-          <!-- HEADER -->
           <tr>
             <td style="background:{{BRAND.primaryColor}};">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -62,73 +130,33 @@ export const emailTemplates: EmailTemplate[] = [
                     </table>
                   </td>
                 </tr>
-                <tr>
-                  <td style="padding:0 20px 20px 20px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center" class="ec-service-cell" style="width:20%; color:#ffffff; font-size:10px; padding:6px;">
-                          <div style="font-size:19px; line-height:1;">🖥️</div>
-                          <div style="margin-top:4px; color:#dbe6fb;">Website<br/>Development</div>
-                        </td>
-                        <td align="center" class="ec-service-cell" style="width:20%; color:#ffffff; font-size:10px; padding:6px;">
-                          <div style="font-size:19px; line-height:1;">🔍</div>
-                          <div style="margin-top:4px; color:#dbe6fb;">SEO &amp; Local<br/>Visibility</div>
-                        </td>
-                        <td align="center" class="ec-service-cell" style="width:20%; color:#ffffff; font-size:10px; padding:6px;">
-                          <div style="font-size:19px; line-height:1;">📣</div>
-                          <div style="margin-top:4px; color:#dbe6fb;">Digital<br/>Marketing</div>
-                        </td>
-                        <td align="center" class="ec-service-cell" style="width:20%; color:#ffffff; font-size:10px; padding:6px;">
-                          <div style="font-size:19px; line-height:1;">👥</div>
-                          <div style="margin-top:4px; color:#dbe6fb;">Lead Generation<br/>Systems</div>
-                        </td>
-                        <td align="center" class="ec-service-cell" style="width:20%; color:#ffffff; font-size:10px; padding:6px;">
-                          <div style="font-size:19px; line-height:1;">🤖</div>
-                          <div style="margin-top:4px; color:#dbe6fb;">AI &amp; Automation<br/>Solutions</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
               </table>
             </td>
           </tr>
           <tr><td style="height:4px; background:{{BRAND.accentColor}}; line-height:4px; font-size:0;">&nbsp;</td></tr>
 
-          <!-- BODY -->
           <tr>
             <td class="ec-inner-pad" style="padding:32px 36px; color:#1e293b; font-size:14.5px; line-height:1.7;">
 
-              <p style="margin:0 0 16px 0;">Hello [Customer Name] Team,</p>
-              <p style="margin:0 0 20px 0;">
-              {{AI_CONTENT}}
-              </p>
+              <p style="margin:0 0 16px 0;">{{AI:greeting}}</p>
 
-              <p style="margin:0 0 16px 0;">We reviewed [URL] to understand how effectively your current digital presence supports your [CustomerType] and customer acquisition.</p>
-
-              <p style="margin:0 0 20px 0;">From the analysis, your website currently shows <b>[OverallWebsiteScore]/100</b>. We noticed several areas that could potentially strengthen your online presence and business-development journey.</p>
+              <p style="margin:0 0 20px 0;">{{AI:intro}}</p>
 
               <p style="margin:0 0 10px 0; font-size:16px; font-weight:700; color:{{BRAND.primaryColor}};">Website Performance Snapshot</p>
 
+              <p style="margin:0 0 10px 0;">{{AI:snapshotLeadIn}}</p>
+
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0;">
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>Design:</b> [DesignQuality]/100</td></tr>
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>Mobile Experience:</b> [MobileScore]/100</td></tr>
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>SEO:</b> [SEOScore]/100</td></tr>
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>Lead Generation:</b> [LeadGenerationScore]/100</td></tr>
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>AI &amp; Automation:</b> [AIAutomationScore]/100</td></tr>
-                <tr><td style="padding:3px 0; font-size:14px;">•&nbsp; <b>Overall:</b> [OverallWebsiteScore]/100</td></tr>
+                {{AI:scoreRows}}
               </table>
-              
 
-              <p style="margin:0 0 16px 0;">The main opportunities we identified are <b>[LackingWebDevelopment]</b> and <b>[LackingSEO]</b>. For a business operating in [CustomerType], improving these areas could help create a stronger journey from website visitors and strengthen local search visibility.</p>
+              <p style="margin:0 0 16px 0;">{{AI:opportunities}}</p>
 
-              <p style="margin:0 0 16px 0;">At {{BRAND.companyName}}, we can help with website optimization, local SEO, conversion-focused service pages, lead-generation systems, WhatsApp automation, and AI-powered enquiry/lead-qualification agents.</p>
+              <p style="margin:0 0 16px 0;">{{AI:servicesPitch}}</p>
 
-              <p style="margin:0 0 16px 0;">There may also be an opportunity to create additional commercial value through <b>[MonetizeArea]</b> — [improvementArea]. These improvements could help make the website a more effective channel for qualified enquiries, customer acquisition, and repeat business.</p>
+              <p style="margin:0 0 16px 0;">{{AI:monetization}}</p>
 
-              <p style="margin:0 0 16px 0;">We'd be happy to share a practical improvement plan for [Business Name] based on the opportunities identified in this analysis.</p>
-
-              <p style="margin:0 0 24px 0;">Would you be open to a short discussion?</p>
+              <p style="margin:0 0 24px 0;">{{AI:closing}}</p>
 
               <p style="margin:0;">
                 Best regards,<br/>
@@ -140,7 +168,6 @@ export const emailTemplates: EmailTemplate[] = [
             </td>
           </tr>
 
-          <!-- FOOTER -->
           <tr>
             <td style="background:{{BRAND.primaryColor}};">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -174,7 +201,7 @@ export const emailTemplates: EmailTemplate[] = [
   </table>
 </body>
 </html>`,
-  },
+},
 ]
 
 export const getEmailTemplateById = (id: string | null | undefined) =>

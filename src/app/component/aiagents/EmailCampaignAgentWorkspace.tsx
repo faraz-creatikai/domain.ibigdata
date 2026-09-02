@@ -1384,7 +1384,12 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
             const payload: any = { customerIds: sendToAll ? [] : Array.from(selectedIds), sendToAll, mode: language }
             if (composerTab === 'ai') {
                 payload.userPrompt = userPrompt.trim()
-                if (selectedTemplate) payload.templateHtml = selectedTemplate.html
+                if (selectedTemplate) {
+                    payload.templateHtml = selectedTemplate.html
+                    if (selectedTemplate.aiSlots?.length) {
+                        payload.templateAiSlots = selectedTemplate.aiSlots
+                    }
+                }
             } else if (composerTab === 'manual') {
                 payload.Subject = subject.trim()
                 payload.Body = body.trim()
@@ -1602,6 +1607,15 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
                                 ) : (
                                     <ChooseTemplateButton label="Choose a template as a base" onClick={() => setIsPickerOpen(true)} />
                                 )}
+                                {selectedTemplate?.aiSlots?.length ? (
+                                    <p className="text-[9.5px] mt-1.5 flex items-center gap-1" style={{ color: '#0f766e' }}>
+                                        <SparkleIcon /> AI writes this template's full content — greeting through closing — from each batch's available fields.
+                                    </p>
+                                ) : selectedTemplate ? (
+                                    <p className="text-[9.5px] mt-1.5" style={{ color: '#94a3b8' }}>
+                                        AI writes one message that gets inserted into this template.
+                                    </p>
+                                ) : null}
                             </div>
 
                         ) : composerTab === 'existing' ? (
