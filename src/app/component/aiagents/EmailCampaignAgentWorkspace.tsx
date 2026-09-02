@@ -4,6 +4,7 @@ import { getCustomer } from '@/store/customer'
 import { emailCustomerViaAi, getMail } from '@/store/masters/mail/mail'
 import { emailTemplates, getEmailTemplateById, EmailTemplate } from '@/app/data/emailTemplate' // <-- Adjust this path
 import React, { useEffect, useRef, useState, useMemo } from 'react'
+import { applyBrandTokens } from '@/config/brandConfig'
 
 /* ─────────────────────────────────────────────────────────────
    Email Campaign Agent Workspace
@@ -172,7 +173,8 @@ const TemplateThumbnail = ({ html, size = 'card', label }: { html: string; size?
                     position: 'absolute', top: 0, left: 0, pointerEvents: 'none',
                 }}
             >
-                <iframe srcDoc={html} title={label || 'template preview'} scrolling="no" style={{ width: TEMPLATE_SRC_W, height: TEMPLATE_SRC_H, border: 'none' }} />
+
+                <iframe srcDoc={applyBrandTokens(html)} title={label || 'template preview'} scrolling="no" style={{ width: TEMPLATE_SRC_W, height: TEMPLATE_SRC_H, border: 'none' }} />
             </div>
         </div>
     )
@@ -1038,7 +1040,7 @@ const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, cust
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                           <p className="text-[11.5px] font-semibold" style={{ color: '#0f172a' }}>{getRunLabel(run)}</p>
+                            <p className="text-[11.5px] font-semibold" style={{ color: '#0f172a' }}>{getRunLabel(run)}</p>
                             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: '#f1f5f9', color: '#64748b' }}>{run.language}</span>
                             {run.templateName && (
                                 <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: '#f0fdfa', color: '#0f766e' }}>{run.templateName}</span>
@@ -1046,7 +1048,7 @@ const RunCard = ({ run, expanded, onToggleExpand, visibleCount, onLoadMore, cust
                             <span className="text-[9.5px]" style={{ color: '#cbd5e1' }}>{run.timestamp?.toLocaleString?.(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {run.promptEcho && <p className="text-[11px] italic mt-1 line-clamp-2" style={{ color: '#64748b' }}>"{run.promptEcho}"</p>}
-                       {(run.mode === 'ai' || (run.mode === 'existing' && run.aiRefine)) && run.workSummary && (
+                        {(run.mode === 'ai' || (run.mode === 'existing' && run.aiRefine)) && run.workSummary && (
                             <div className="mt-2 rounded-lg border px-3 py-2.5" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
                                 <p className="text-[9px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: '#94a3b8' }}>
                                     <SparkleIcon /> AI strategy used for this campaign
@@ -1236,6 +1238,11 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
         [emailDbTemplates, selectedDbTemplateId]
     )
 
+    const savedTemplateHasAiSlot = useMemo(
+        () => selectedDbTemplate?.body?.includes('{{AI_CONTENT}}') ?? false,
+        [selectedDbTemplate]
+    )
+
     const fetchDbTemplates = async () => {
         setIsDbTemplatesLoading(true)
         try {
@@ -1255,8 +1262,8 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     }, [composerTab, dbTemplatesFetched])
 
     useEffect(() => {
-    if (!selectedDbTemplateId) setAiRefineExisting(false)
-}, [selectedDbTemplateId])
+        if (!selectedDbTemplateId) setAiRefineExisting(false)
+    }, [selectedDbTemplateId])
 
     useEffect(() => { fetchCustomers() }, [])
     useEffect(() => { setVisibleCount(PAGE_SIZE) }, [searchQuery])
@@ -1330,9 +1337,9 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
 
     const hasTargets = sendToAll || selectedIds.size > 0
     const hasContent =
-    composerTab === 'ai' ? userPrompt.trim().length > 0 :
-        composerTab === 'manual' ? (subject.trim().length > 0 && body.trim().length > 0) :
-            (aiRefineExisting ? (!!selectedDbTemplateId && userPrompt.trim().length > 0) : !!selectedDbTemplateId)
+        composerTab === 'ai' ? userPrompt.trim().length > 0 :
+            composerTab === 'manual' ? (subject.trim().length > 0 && body.trim().length > 0) :
+                (aiRefineExisting ? (!!selectedDbTemplateId && userPrompt.trim().length > 0) : !!selectedDbTemplateId)
     const canSend = hasTargets && hasContent && !isSending
     const targetCount = sendToAll ? customers.length : selectedIds.size
 
@@ -1354,12 +1361,12 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
     }
 
     const getPromptEcho = (): string => {
-    switch (composerTab) {
-        case 'ai': return userPrompt.trim()
-        case 'manual': return subject.trim()
-        case 'existing': return aiRefineExisting ? userPrompt.trim() : (selectedDbTemplate?.subject || '')
+        switch (composerTab) {
+            case 'ai': return userPrompt.trim()
+            case 'manual': return subject.trim()
+            case 'existing': return aiRefineExisting ? userPrompt.trim() : (selectedDbTemplate?.subject || '')
+        }
     }
-}
 
     const getTemplateName = (): string | null => {
         switch (composerTab) {
@@ -1369,68 +1376,68 @@ const EmailCampaignAgentWorkspace = ({ isOpen }: { isOpen: boolean }) => {
         }
     }
 
-const handleSend = async () => {
-    if (isSending) return
-    setSendError(null)
-    setIsSending(true)
-    try {
-        const payload: any = { customerIds: sendToAll ? [] : Array.from(selectedIds), sendToAll, mode: language }
-        if (composerTab === 'ai') {
-            payload.userPrompt = userPrompt.trim()
-            if (selectedTemplate) payload.templateHtml = selectedTemplate.html
-        } else if (composerTab === 'manual') {
-            payload.Subject = subject.trim()
-            payload.Body = body.trim()
-        } else {
-            payload.templateId = selectedDbTemplateId
-            if (aiRefineExisting) {
+    const handleSend = async () => {
+        if (isSending) return
+        setSendError(null)
+        setIsSending(true)
+        try {
+            const payload: any = { customerIds: sendToAll ? [] : Array.from(selectedIds), sendToAll, mode: language }
+            if (composerTab === 'ai') {
                 payload.userPrompt = userPrompt.trim()
+                if (selectedTemplate) payload.templateHtml = selectedTemplate.html
+            } else if (composerTab === 'manual') {
+                payload.Subject = subject.trim()
+                payload.Body = body.trim()
+            } else {
+                payload.templateId = selectedDbTemplateId
+                if (aiRefineExisting) {
+                    payload.userPrompt = userPrompt.trim()
+                }
             }
-        }
 
-        const res: any = await emailCustomerViaAi(payload)
-        if (!res || res.success === false) {
+            const res: any = await emailCustomerViaAi(payload)
+            if (!res || res.success === false) {
+                setSendError('Something went wrong while sending the campaign. Please try again.')
+                setIsSending(false)
+                return
+            }
+
+            const results = res.results || []
+            const sentCount = typeof res.sent === 'number' ? res.sent : results.filter((r: any) => r.status === 'sent').length
+            const failedCount = results.filter((r: any) => r.status === 'failed').length
+            const skippedCount = results.length - sentCount - failedCount
+
+            const runId = `run_${Date.now()}`
+            const run = {
+                id: runId, mode: composerTab, language,
+                aiRefine: composerTab === 'existing' ? aiRefineExisting : false,
+                promptEcho: getPromptEcho(),
+                templateName: getTemplateName(),
+                targetCount, sentCount, failedCount, skippedCount: Math.max(0, skippedCount),
+                results,
+                metadata: res.metadata || null,
+                workSummary: res.workSummary || null,
+                timestamp: new Date(),
+            }
+            setRuns(prev => [run, ...prev])
+            setRunExpandedMap(prev => ({ ...prev, [runId]: results.length > 0 && results.length <= 5 }))
+            setRunVisibleMap(prev => ({ ...prev, [runId]: RESULT_PAGE_SIZE }))
+            setToast({ type: 'success', text: `Campaign sent — ${sentCount} delivered${failedCount ? `, ${failedCount} failed` : ''}.` })
+
+            setUserPrompt('')
+            setSubject('')
+            setBody('')
+            setSelectedTemplateId(null)
+            setSelectedDbTemplateId(null)
+            setAiRefineExisting(false)
+            setShowConfirm(false)
+        } catch (err: any) {
+            console.error(err)
             setSendError('Something went wrong while sending the campaign. Please try again.')
+        } finally {
             setIsSending(false)
-            return
         }
-
-        const results = res.results || []
-        const sentCount = typeof res.sent === 'number' ? res.sent : results.filter((r: any) => r.status === 'sent').length
-        const failedCount = results.filter((r: any) => r.status === 'failed').length
-        const skippedCount = results.length - sentCount - failedCount
-
-        const runId = `run_${Date.now()}`
-        const run = {
-            id: runId, mode: composerTab, language,
-            aiRefine: composerTab === 'existing' ? aiRefineExisting : false,
-            promptEcho: getPromptEcho(),
-            templateName: getTemplateName(),
-            targetCount, sentCount, failedCount, skippedCount: Math.max(0, skippedCount),
-            results,
-            metadata: res.metadata || null,
-            workSummary: res.workSummary || null,
-            timestamp: new Date(),
-        }
-        setRuns(prev => [run, ...prev])
-        setRunExpandedMap(prev => ({ ...prev, [runId]: results.length > 0 && results.length <= 5 }))
-        setRunVisibleMap(prev => ({ ...prev, [runId]: RESULT_PAGE_SIZE }))
-        setToast({ type: 'success', text: `Campaign sent — ${sentCount} delivered${failedCount ? `, ${failedCount} failed` : ''}.` })
-
-        setUserPrompt('')
-        setSubject('')
-        setBody('')
-        setSelectedTemplateId(null)
-        setSelectedDbTemplateId(null)
-        setAiRefineExisting(false)
-        setShowConfirm(false)
-    } catch (err: any) {
-        console.error(err)
-        setSendError('Something went wrong while sending the campaign. Please try again.')
-    } finally {
-        setIsSending(false)
     }
-}
 
     return (
         <div className="flex h-full overflow-hidden rounded-xl relative" style={{ background: '#f8fafc' }}>
@@ -1597,83 +1604,94 @@ const handleSend = async () => {
                                 )}
                             </div>
 
-                      ) : composerTab === 'existing' ? (
-    <div className="px-4 pt-3 pb-4 relative">
-        <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>Saved template</p>
-        <p className="text-[9.5px] mb-3 leading-relaxed" style={{ color: '#94a3b8' }}>
-            {aiRefineExisting
-                ? "AI rewrites the message inside this template once, then personalizes it per customer — name, city, and other details are still swapped in automatically."
-                : "Sent exactly as saved to every targeted customer — name, city, and other tokens are still swapped per customer. No AI writing, no extra cost."}
-        </p>
+                        ) : composerTab === 'existing' ? (
+                            <div className="px-4 pt-3 pb-4 relative">
+                                <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>Saved template</p>
+                                <p className="text-[9.5px] mb-3 leading-relaxed" style={{ color: '#94a3b8' }}>
+                                    {aiRefineExisting
+                                        ? "AI rewrites the message inside this template once, then personalizes it per customer — name, city, and other details are still swapped in automatically."
+                                        : "Sent exactly as saved to every targeted customer — name, city, and other tokens are still swapped per customer. No AI writing, no extra cost."}
+                                </p>
 
-        {selectedDbTemplate ? (
-            <div className="flex flex-col gap-2.5">
-                <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl border" style={{ borderColor: '#e7e2da', background: '#fbfaf8' }}>
-                    <TemplateThumbnail html={selectedDbTemplate.body} size="chip" label={selectedDbTemplate.name} />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[10.5px] font-semibold truncate" style={{ color: '#1c1917' }}>{selectedDbTemplate.name}</p>
-                        <p className="text-[9px] truncate" style={{ color: '#94a3b8' }}>{selectedDbTemplate.subject || 'No subject'}</p>
-                    </div>
-                    <button onClick={() => setIsSavedPickerOpen(true)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#0d9488' }}>Change</button>
-                    <button onClick={() => setSelectedDbTemplateId(null)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#94a3b8' }}>Clear</button>
-                </div>
+                                {selectedDbTemplate ? (
+                                    <div className="flex flex-col gap-2.5">
+                                        <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl border" style={{ borderColor: '#e7e2da', background: '#fbfaf8' }}>
+                                            <TemplateThumbnail html={selectedDbTemplate.body} size="chip" label={selectedDbTemplate.name} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10.5px] font-semibold truncate" style={{ color: '#1c1917' }}>{selectedDbTemplate.name}</p>
+                                                <p className="text-[9px] truncate" style={{ color: '#94a3b8' }}>{selectedDbTemplate.subject || 'No subject'}</p>
+                                            </div>
+                                            <button onClick={() => setIsSavedPickerOpen(true)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#0d9488' }}>Change</button>
+                                            <button onClick={() => setSelectedDbTemplateId(null)} className="text-[10px] cursor-pointer font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ color: '#94a3b8' }}>Clear</button>
+                                        </div>
 
-                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border" style={{ background: aiRefineExisting ? '#eef2ff' : '#f8fafc', borderColor: aiRefineExisting ? '#c7d2fe' : '#e2e8f0' }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: aiRefineExisting ? '#4f46e5' : '#f1f5f9', color: aiRefineExisting ? '#ffffff' : '#94a3b8' }}>
-                        <SparkleIcon />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold" style={{ color: aiRefineExisting ? '#4338ca' : '#334155' }}>Refine with AI</p>
-                        <p className="text-[9.5px] mt-0.5" style={{ color: '#94a3b8' }}>Let AI rewrite the message using your campaign goal — layout stays the same</p>
-                    </div>
-                    <ToggleSwitch checked={aiRefineExisting} onChange={() => setAiRefineExisting(v => !v)} />
-                </div>
+                                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border" style={{ background: aiRefineExisting ? '#eef2ff' : '#f8fafc', borderColor: aiRefineExisting ? '#c7d2fe' : '#e2e8f0' }}>
+                                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: aiRefineExisting ? '#4f46e5' : '#f1f5f9', color: aiRefineExisting ? '#ffffff' : '#94a3b8' }}>
+                                                <SparkleIcon />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[11px] font-semibold" style={{ color: aiRefineExisting ? '#4338ca' : '#334155' }}>Refine with AI</p>
+                                                {aiRefineExisting && !savedTemplateHasAiSlot && (
+                                                    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                                                        <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: '#fef3c7', color: '#b45309' }}>
+                                                            <AlertIcon />
+                                                        </div>
+                                                        <p className="text-[10.5px] leading-relaxed" style={{ color: '#92400e' }}>
+                                                            This template has no AI content slot, so your message will appear as a separate closing section below it, not woven into the layout. Add <code style={{ background: '#fef3c7', padding: '1px 4px', borderRadius: '4px' }}>{'{{AI_CONTENT}}'}</code> inside the template body (in Templates) to place it precisely instead.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                <p className="text-[9.5px] mt-0.5" style={{ color: '#94a3b8' }}>Let AI rewrite the message using your campaign goal — layout stays the same</p>
+                                            </div>
+                                            <ToggleSwitch checked={aiRefineExisting} onChange={() => setAiRefineExisting(v => !v)} />
+                                        </div>
 
-                {aiRefineExisting && (
-                    <div className="flex flex-col gap-2.5">
-                        <div>
-                            <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>What's this campaign about?</p>
-                            <textarea
-                                value={userPrompt} onChange={e => setUserPrompt(e.target.value)} disabled={isSending} rows={3}
-                                placeholder="e.g. Highlight their missing SEO setup and invite them to a quick call…"
-                                className="w-full resize-none rounded-xl px-3 py-2.5 text-[12px] leading-relaxed outline-none border transition-all duration-150 bg-stone-50 border-slate-200 text-slate-700 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 focus:bg-white disabled:opacity-50"
-                            />
-                        </div>
-                        <div>
-                            <p className="text-[10.5px] font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: '#334155' }}><GlobeIcon /> Tone &amp; language</p>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                {LANGUAGE_OPTIONS.map(l => (
-                                    <button key={l.value} onClick={() => setLanguage(l.value)} className="text-[10.5px] cursor-pointer font-semibold px-2.5 py-1 rounded-lg border transition-all" style={language === l.value ? { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' } : { background: '#ffffff', color: '#94a3b8', borderColor: '#e2e8f0' }}>
-                                        {l.label}
+                                        {aiRefineExisting && (
+                                            <div className="flex flex-col gap-2.5">
+                                                <div>
+                                                    <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>What's this campaign about?</p>
+                                                    <textarea
+                                                        value={userPrompt} onChange={e => setUserPrompt(e.target.value)} disabled={isSending} rows={3}
+                                                        placeholder="e.g. Highlight their missing SEO setup and invite them to a quick call…"
+                                                        className="w-full resize-none rounded-xl px-3 py-2.5 text-[12px] leading-relaxed outline-none border transition-all duration-150 bg-stone-50 border-slate-200 text-slate-700 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 focus:bg-white disabled:opacity-50"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10.5px] font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: '#334155' }}><GlobeIcon /> Tone &amp; language</p>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {LANGUAGE_OPTIONS.map(l => (
+                                                            <button key={l.value} onClick={() => setLanguage(l.value)} className="text-[10.5px] cursor-pointer font-semibold px-2.5 py-1 rounded-lg border transition-all" style={language === l.value ? { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' } : { background: '#ffffff', color: '#94a3b8', borderColor: '#e2e8f0' }}>
+                                                                {l.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="w-full h-[280px] rounded-xl border overflow-hidden bg-white shadow-inner" style={{ borderColor: '#e2e8f0' }}>
+
+                                            <iframe srcDoc={applyBrandTokens(selectedDbTemplate.body)} className="w-full h-full border-none" title="Saved template preview" />
+                                        </div>
+                                        {aiRefineExisting && (
+                                            <p className="text-[9.5px]" style={{ color: '#cbd5e1' }}>
+                                                Preview shows the saved layout — AI's rewritten message will be inserted into it once you send.
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setIsSavedPickerOpen(true)}
+                                        className="w-full flex flex-col items-center justify-center gap-2 px-3 py-8 rounded-xl border border-dashed cursor-pointer transition-all hover:border-teal-300 hover:bg-teal-50/40"
+                                        style={{ borderColor: '#e7e2da', color: '#94a3b8' }}
+                                    >
+                                        <LayersIcon />
+                                        <span className="text-[11px] font-semibold">Choose a saved template</span>
+                                        <span className="text-[9.5px]">{isDbTemplatesLoading ? 'Loading…' : `${emailDbTemplates.length} available`}</span>
                                     </button>
-                                ))}
+                                )}
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="w-full h-[280px] rounded-xl border overflow-hidden bg-white shadow-inner" style={{ borderColor: '#e2e8f0' }}>
-                    <iframe srcDoc={selectedDbTemplate.body} className="w-full h-full border-none" title="Saved template preview" />
-                </div>
-                {aiRefineExisting && (
-                    <p className="text-[9.5px]" style={{ color: '#cbd5e1' }}>
-                        Preview shows the saved layout — AI's rewritten message will be inserted into it once you send.
-                    </p>
-                )}
-            </div>
-        ) : (
-            <button
-                onClick={() => setIsSavedPickerOpen(true)}
-                className="w-full flex flex-col items-center justify-center gap-2 px-3 py-8 rounded-xl border border-dashed cursor-pointer transition-all hover:border-teal-300 hover:bg-teal-50/40"
-                style={{ borderColor: '#e7e2da', color: '#94a3b8' }}
-            >
-                <LayersIcon />
-                <span className="text-[11px] font-semibold">Choose a saved template</span>
-                <span className="text-[9.5px]">{isDbTemplatesLoading ? 'Loading…' : `${emailDbTemplates.length} available`}</span>
-            </button>
-        )}
-    </div>
-) : (
+                        ) : (
                             <div className="px-4 pt-3 pb-4 relative">
 
                                 <p className="text-[10.5px] font-semibold mb-1.5" style={{ color: '#334155' }}>Template</p>
@@ -1715,8 +1733,9 @@ const handleSend = async () => {
 
                                 {isPreviewMode ? (
                                     <div className="w-full h-[340px] rounded-xl border overflow-hidden bg-white mb-2 shadow-inner" style={{ borderColor: '#e2e8f0' }}>
+
                                         <iframe
-                                            srcDoc={body || '<div style="font-family:sans-serif;padding:20px;color:#94a3b8;text-align:center;">Select a template or edit HTML to see preview</div>'}
+                                            srcDoc={applyBrandTokens(body) || '<div style="font-family:sans-serif;padding:20px;color:#94a3b8;text-align:center;">Select a template or edit HTML to see preview</div>'}
                                             className="w-full h-full border-none"
                                             title="Email Preview"
                                         />
@@ -1790,13 +1809,13 @@ const handleSend = async () => {
                 )}
 
                 <ConfirmSendModal
-    open={showConfirm} targetCount={targetCount} mode={composerTab} language={language}
-    promptEcho={getPromptEcho()}
-    subject={composerTab === 'existing' ? (selectedDbTemplate?.subject || '') : subject.trim()}
-    templateName={getTemplateName()}
-    aiRefine={composerTab === 'existing' ? aiRefineExisting : false}
-    isSending={isSending} error={sendError} onCancel={() => !isSending && setShowConfirm(false)} onConfirm={handleSend}
-/>
+                    open={showConfirm} targetCount={targetCount} mode={composerTab} language={language}
+                    promptEcho={getPromptEcho()}
+                    subject={composerTab === 'existing' ? (selectedDbTemplate?.subject || '') : subject.trim()}
+                    templateName={getTemplateName()}
+                    aiRefine={composerTab === 'existing' ? aiRefineExisting : false}
+                    isSending={isSending} error={sendError} onCancel={() => !isSending && setShowConfirm(false)} onConfirm={handleSend}
+                />
             </div>
 
             {viewingCustomer && <CustomerDetailDrawer customer={viewingCustomer} onClose={() => setViewingCustomer(null)} />}
@@ -1813,7 +1832,7 @@ const handleSend = async () => {
                 templates={emailDbTemplates}
                 isLoading={isDbTemplatesLoading}
                 selectedId={selectedDbTemplateId}
-               onSelect={(id) => setSelectedDbTemplateId(id)}
+                onSelect={(id) => setSelectedDbTemplateId(id)}
                 onClose={() => setIsSavedPickerOpen(false)}
             />
             <GoalPickerModal
