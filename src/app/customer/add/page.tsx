@@ -553,7 +553,7 @@ export default function CustomerAdd() {
                 isSearchable
               />
               <InputField className=" max-sm:hidden" label={getLabel("URL", "URL")} name="URL" value={customerData.URL ?? ""} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
+             
               <InputField className=" max-sm:hidden" label={getLabel("Address", "Address")} name="Address" value={customerData.Address} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Email", "Email")} name="Email" value={customerData.Email} onChange={handleInputChange} error={errors.Email} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Facilities) ? fieldOptions.Facilities : []} label={getLabel("Facillities", "Facilities")} value={customerData.Facilities} onChange={(v: any) => handleSelectChange("Facilities", v)} />
@@ -575,6 +575,7 @@ export default function CustomerAdd() {
               <TextareaField label={getLabel("Description", "Description")} name="Description" value={customerData.Description} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Video", "Video")} name="Video" value={customerData.Video} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("GoogleMap", "Google Map")} name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
+               <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Verified) ? fieldOptions.Verified : []} label={getLabel("Verified", "Verified")} value={customerData.Verified} onChange={(v: any) => handleSelectChange("Verified", v)} />
             </div>
 

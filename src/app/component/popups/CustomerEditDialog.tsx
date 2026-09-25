@@ -553,24 +553,25 @@ export default function CustomerEditDialog({
                 error={errors.SubLocation}
                 isSearchable
               />
-              <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("URL", "URL")} name="URL" value={customerData.URL ?? ""} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Address", "Address")} name="Address" value={customerData.Address} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Email", "Email")} name="Email" value={customerData.Email} onChange={handleInputChange} error={errors.Email} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Facilities) ? fieldOptions.Facilities : []} label={getLabel("Facillities", "Facilites")} value={customerData.Facilities} onChange={(v) => handleSelectChange("Facilities", v)} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.ReferenceId) ? fieldOptions.ReferenceId : []} label={getLabel("ReferenceId", "Reference Id")} value={customerData.ReferenceId} onChange={(v) => handleSelectChange("ReferenceId", v)} />
-              <InputField className=" max-sm:hidden" label={getLabel("CustomerId", "Customer ID")} name="CustomerId" value={customerData.CustomerId} onChange={handleInputChange} />
-              <InputField className=" max-sm:hidden" label={getLabel("ClientId", "Client ID")} name="ClientId" value={customerData.ClientId ?? ""} onChange={handleInputChange} />
+             {/*  <InputField className=" max-sm:hidden" label={getLabel("CustomerId", "Customer ID")} name="CustomerId" value={customerData.CustomerId} onChange={handleInputChange} />
+              <InputField className=" max-sm:hidden" label={getLabel("ClientId", "Client ID")} name="ClientId" value={customerData.ClientId ?? ""} onChange={handleInputChange} /> */}
               <div className=" max-sm:hidden">
                 <DateSelector label={getLabel("CustomerDate", "Customer Date")} value={customerData.CustomerDate} onChange={(val) => handleSelectChange("CustomerDate", val)} />
               </div>
               <InputField className=" max-sm:hidden" label={getLabel("CustomerYear", "Customer Year")} name="CustomerYear" value={customerData.CustomerYear} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Price", "Price")} name="Price" value={customerData.Price ?? ""} onChange={handleInputChange} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.LeadType) ? fieldOptions.LeadType : []} label={getLabel("LeadType", "LeadType")} value={customerData.LeadType} onChange={(v: any) => handleSelectChange("LeadType", v)} />
-              <InputField className=" max-sm:hidden" label={getLabel("URL", "URL")} name="URL" value={customerData.URL ?? ""} onChange={handleInputChange} />
+              
               <InputField className=" max-sm:hidden" label={getLabel("Other", "Others")} name="Other" value={customerData.Other} onChange={handleInputChange} />
               <TextareaField label={getLabel("Description", "Description")} name="Description" value={customerData.Description} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("Video", "Video")} name="Video" value={customerData.Video} onChange={handleInputChange} />
               <InputField className=" max-sm:hidden" label={getLabel("GoogleMap", "Google Map")} name="GoogleMap" value={customerData.GoogleMap} onChange={handleInputChange} />
+               <InputField className=" max-sm:hidden" label={getLabel("Area", "Area")} name="Area" value={customerData.Area} onChange={handleInputChange} />
               <SingleSelect className=" max-sm:hidden" options={Array.isArray(fieldOptions?.Verified) ? fieldOptions.Verified : []} label={getLabel("Verified", "Verified")} value={customerData.Verified} onChange={(v) => handleSelectChange("Verified", v)} />
 
             </div>
