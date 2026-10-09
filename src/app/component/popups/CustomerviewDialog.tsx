@@ -361,7 +361,7 @@ export default function CustomerViewDialog({ isOpen, onClose, customerId, onEdit
             <span className="inline-flex items-center gap-1 mr-1 mb-[3px] text-gray-500">
               {/* Emoji font ONLY applied to the flag */}
               <span style={{ fontFamily: "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif" }}>
-                {isoToFlagEmoji(countryInfo.iso2)}
+                {isoToFlagEmoji({ iso2: countryInfo.iso2 })}
               </span>
               
               {/* font-sans forces the normal website font for the number */}

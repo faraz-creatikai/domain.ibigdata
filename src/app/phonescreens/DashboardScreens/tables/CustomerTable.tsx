@@ -62,7 +62,7 @@ const CountryPrefix = ({ lead }: { lead: Record<string, any> }) => {
     if (!country) return null;
     return (
         <span className="inline-flex items-center gap-1 mr-1">
-            <span style={{ fontFamily: FLAG_FONT_STACK }}>{isoToFlagEmoji(country.iso2)}</span>
+            <span style={{ fontFamily: FLAG_FONT_STACK }}>{isoToFlagEmoji({ iso2: country.iso2 })}</span>
             <span className="text-gray-500">+{country.code}</span>
         </span>
     );
@@ -269,27 +269,27 @@ export default function CustomerTable<T extends Record<string, any>>({
                             {/* LEFT: label data */}
                             <div className="flex-1 min-w-0">
                                 {labelLeads.map((item, j) => (
-  <div key={j} className="grid grid-cols-[max-content_8px_1fr] items-start gap-x-2 gap-y-0.5 mb-1.5">
-    <span className="text-xs font-semibold text-gray-500 dark:text-[var(--color-primary-light)] whitespace-nowrap leading-5">
-      {item.label}
-    </span>
-    <span className="text-xs text-gray-300 dark:text-white/20 leading-5">—</span>
-    <span className="text-xs text-gray-800 dark:text-[var(--color-primary-lighter)] font-medium leading-5 break-words line-clamp-2">
-      {item.label === "Contact No" || item.key === "ContactNumber" ? (
-        <span className="inline-flex items-center gap-1">
-          <CountryPrefix lead={lead} />
-          {lead[item.key] ?? "N/A"}
-        </span>
-      ) : Array.isArray(lead[item.key])
-        ? lead[item.key].length > 0
-          ? lead[item.key].map((e: any) => typeof e === "object" ? e.name || JSON.stringify(e) : e).join(", ")
-          : "N/A"
-        : typeof lead[item.key] === "object" && lead[item.key] !== null
-          ? JSON.stringify(lead[item.key])
-          : lead[item.key] ?? "N/A"}
-    </span>
-  </div>
-))}
+                                    <div key={j} className="grid grid-cols-[max-content_8px_1fr] items-start gap-x-2 gap-y-0.5 mb-1.5">
+                                        <span className="text-xs font-semibold text-gray-500 dark:text-[var(--color-primary-light)] whitespace-nowrap leading-5">
+                                            {item.label}
+                                        </span>
+                                        <span className="text-xs text-gray-300 dark:text-white/20 leading-5">—</span>
+                                        <span className="text-xs text-gray-800 dark:text-[var(--color-primary-lighter)] font-medium leading-5 break-words line-clamp-2">
+                                            {item.label === "Contact No" || item.key === "ContactNumber" ? (
+                                                <span className="inline-flex items-center gap-1">
+                                                    <CountryPrefix lead={lead} />
+                                                    {lead[item.key] ?? "N/A"}
+                                                </span>
+                                            ) : Array.isArray(lead[item.key])
+                                                ? lead[item.key].length > 0
+                                                    ? lead[item.key].map((e: any) => typeof e === "object" ? e.name || JSON.stringify(e) : e).join(", ")
+                                                    : "N/A"
+                                                : typeof lead[item.key] === "object" && lead[item.key] !== null
+                                                    ? JSON.stringify(lead[item.key])
+                                                    : lead[item.key] ?? "N/A"}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
 
                             {/* RIGHT: image + all action buttons in one unified column */}

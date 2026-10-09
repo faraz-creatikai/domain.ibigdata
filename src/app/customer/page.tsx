@@ -4312,7 +4312,7 @@ export default function Customer() {
                                                 onClick={() => handleAgentCalling(item._id)}
                                               >
                                                 <span className=" mb-[2px]" style={{ fontFamily: "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif" }}>
-                                                  {isoToFlagEmoji(countryInfo.iso2)}
+                                                  {isoToFlagEmoji({ iso2: countryInfo.iso2 })}
                                                 </span>
                                                 <span className="text-gray-500 text-xs mb-[2px]">+{countryInfo.code}</span>
                                                 {item.ContactNumber}

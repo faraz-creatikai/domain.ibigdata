@@ -233,7 +233,7 @@ export const COUNTRY_CODES: CountryCodeOption[] = [
   { code: "94",  iso2: "LK", name: "Sri Lanka",      minLen: 9,  maxLen: 9 },
   { code: "65",  iso2: "SG", name: "Singapore",      minLen: 8,  maxLen: 8 },
   { code: "60",  iso2: "MY", name: "Malaysia",       minLen: 9,  maxLen: 10 },
-  { code: "44",  iso2: "GB", name: "United Kingdom", minLen: 10, maxLen: 10 },
+  { code: "44",  iso2: "GB", name: "United Kingdom", minLen: 10, maxLen: 11 },
   { code: "1",   iso2: "US", name: "US / Canada",    minLen: 10, maxLen: 10 },
   { code: "61",  iso2: "AU", name: "Australia",      minLen: 9,  maxLen: 9 },
 ];
@@ -245,13 +245,13 @@ export const getCountryLenRule = (code: string) =>
   { code, iso2: "", name: code, minLen: 6, maxLen: 11 };
 
 // Converts "IN" -> 🇮🇳 using regional indicator symbols
-export const isoToFlagEmoji = (iso2: string) => {
+export const isoToFlagEmoji = ({iso2,className}: { iso2: string; className?: string }) => {
   if (!iso2 || iso2.length !== 2) return <span>🏳️</span>;
 
   return (
     <span
-      className={`fi fi-${iso2.toLowerCase()} rounded-[2px]`}
-      style={{ width: 20, height: 15, display: "inline-block" }}
+      className={`fi fi-${iso2.toLowerCase()} rounded-[2px] w-[20px] h-[15px] ${className || ""}`}
+      style={{  display: "inline-block" }}
     />
   );
 };

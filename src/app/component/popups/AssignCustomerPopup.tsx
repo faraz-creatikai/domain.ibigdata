@@ -668,7 +668,7 @@ const AssignCustomersPopup: React.FC<AssignCustomersPopupProps> = ({
                                           "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif",
                                       }}
                                     >
-                                      {isoToFlagEmoji(countryInfo.iso2)}
+                                      {isoToFlagEmoji({ iso2: countryInfo.iso2 })}
                                     </span>
 
                                     <span className="text-gray-500 text-xs mr-1 ">

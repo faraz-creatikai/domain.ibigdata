@@ -70,7 +70,7 @@ const PhoneInputField: React.FC<PhoneInputFieldProps> = ({
           className="flex items-center cursor-pointer gap-1 px-3 py-3 border-r border-gray-300 max-sm:dark:border-gray-700 shrink-0 hover:bg-gray-50 max-sm:dark:hover:bg-white/5 rounded-l-sm"
         >
           <span className="text-lg leading-none" style={{ fontFamily: FLAG_FONT_STACK }}>
-            {isoToFlagEmoji(selected.iso2)}
+            {isoToFlagEmoji({ iso2: selected.iso2 })}
           </span>
           <span className="text-sm text-gray-600 max-sm:dark:text-gray-400">+{selected.code}</span>
           <ChevronDown size={14} className="text-gray-400" />
@@ -130,7 +130,7 @@ const PhoneInputField: React.FC<PhoneInputFieldProps> = ({
                 ${c.code === countryCode ? "bg-blue-50 max-sm:dark:bg-blue-900/20" : ""}`}
             >
               <span className="text-lg leading-none" style={{ fontFamily: FLAG_FONT_STACK }}>
-                {isoToFlagEmoji(c.iso2)}
+                {isoToFlagEmoji({ iso2: c.iso2 })}
               </span>
               <span className="flex-1">{c.name}</span>
               <span className="text-gray-400">+{c.code}</span>

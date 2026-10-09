@@ -19,6 +19,7 @@ import {
   Settings,
   UsersIcon,
   ExternalLink,
+  PhoneCall,
 } from "lucide-react";
 
 import { NavMain } from "../components/nav-main";
@@ -51,6 +52,11 @@ const data = {
       title: "Customers",
       url: "/customer",
       icon: User,
+    },
+    {
+      title: "customer calling",
+      url: "/customer/calling",
+      icon: PhoneCall,
     },
     {
       title: "Customer Follow Up",
@@ -245,6 +251,10 @@ const data = {
       icon: LineChart,
       items:[
         {
+          title: "Sarvam Report",
+          url: "/reports/sarvam",
+        },
+        {
           title: "Calling Report",
           url: "/reports/call-report",
         },
@@ -316,6 +326,10 @@ const data = {
           url:"/configuration/ai"
         },
         {
+          title: "Sarvam",
+          url: "/configuration/sarvam",
+        },
+        {
           title: "Tabbly",
           url: "/configuration/tabbly",
         },
@@ -380,6 +394,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if(item.title === "Configuration" && admin?.role !== "administrator"){
       return false
     }
+    if (item.title === "customer calling" && (admin?.role !== "administrator" && admin?.role !== "city_admin")) {
+      return false;
+    }
     return true;
   }).map((item) => {
     // Handle Settings submenu permissions
@@ -391,6 +408,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           if (
             subItem.title === "Customer Fields" &&
             admin?.role !== "administrator"
+          ) {
+            return false;
+          }
+          return true;
+        }),
+      };
+    }
+
+    if (item.title === "Reports") {
+      return {
+        ...item,
+        items: item.items?.filter((subItem) => {
+          // Hide "Sarvam Report" if not admin or city_admin
+          if (
+            subItem.title === "Sarvam Report" &&
+            (admin?.role !== "administrator" && admin?.role !== "city_admin")
           ) {
             return false;
           }

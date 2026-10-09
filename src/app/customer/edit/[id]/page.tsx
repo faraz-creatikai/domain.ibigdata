@@ -148,7 +148,7 @@ export default function CustomerEdit() {
           CustomerImage: [],
           SitePlan: {} as File,
         });
-        console.log(" nice brother , ", data.CustomerFields)
+        //console.log(" nice brother , ", data.CustomerFields)
 
         // ✅ Seed country code from existing customer, fallback to default (old rows won't have it)
         setCountryCode(data.CountryCode || DEFAULT_COUNTRY_CODE);
@@ -295,14 +295,14 @@ export default function CustomerEdit() {
     if (customerData.customerName) formData.append("customerName", customerData.customerName);
     if (customerData.CustomerSubtype) formData.append("CustomerSubType", customerData.CustomerSubtype?.name);
     if (customerData.ContactNumber) {
-  formData.append(
-    "ContactNumber",
-    trimCountryCodeHelper(
-      customerData.ContactNumber,
-      countryCode
-    )
-  );
-}
+      formData.append(
+        "ContactNumber",
+        trimCountryCodeHelper(
+          customerData.ContactNumber,
+          countryCode
+        )
+      );
+    }
     formData.append("CountryCode", countryCode);
     if (customerData.City) formData.append("City", customerData.City?.name);
     if (customerData.Location) formData.append("Location", customerData.Location?.name);
